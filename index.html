@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
+   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
@@ -19,15 +21,31 @@
         th, td { padding: 10px; border: 1px solid #ddd; }
         #winnerList { margin-top: 20px; }
         .hidden { display: none; }
+        .confetti {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    background: #FFD700;
+    top: 0;
+    animation: fall 3s ease-out;
+}
+@keyframes fall {
+    0% { transform: translateY(-10px); }
+    100% { transform: translateY(100vh); }
+}
+
     </style>
 </head>
 <body>
+<audio id="drumroll" src="https://www.fesliyanstudios.com/play-mp3/387" preload="auto"></audio>
+<audio id="chime" src="https://www.fesliyanstudios.com/play-mp3/438" preload="auto"></audio>
 
 <h1>Sri Hanumaan Trader's Lucky Draw</h1>
 <button class="btn-custom" onclick="toggleAdminPanel()">Admin Panel</button>
 <button id="startDrawBtn" class="btn-custom" onclick="startDraw()">Start Lucky Draw</button>
 <button class="btn-custom" onclick="exportWinnersPDF()">Download PDF</button>
 <button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
+<button class="btn-custom" onclick="exportWinnersExcel()">Export to Excel</button>
 
 <!-- Admin Panel -->
 <div id="adminPanel" class="hidden">
@@ -301,7 +319,33 @@ function startDraw() {
     };
     pdfMake.createPdf(docDefinition).download('Winners_List.pdf');
 }
+function exportWinnersExcel() {
+    const ws = XLSX.utils.json_to_sheet(winners);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Winners");
+    XLSX.writeFile(wb, "Winners_List.xlsx");
+}
 
+    function confetti() {
+    for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement("div");
+        confetti.className = "confetti";
+        confetti.style.left = Math.random() * 100 + "vw";
+        confetti.style.animationDuration = Math.random() * 2 + 2 + "s";
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 3000);
+    }
+}
+
+// Call confetti() after revealing top prizes
+confetti();
+// Play sound when drawing starts
+document.getElementById('drumroll').play();
+
+// Play sound when winners are revealed
+document.getElementById('chime').play();
+
+    
     
 </script>
 
