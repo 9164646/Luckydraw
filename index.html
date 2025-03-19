@@ -78,15 +78,19 @@
     <textarea id="namesInput" rows="6" placeholder="Or enter names manually, separated by commas..."></textarea>
     <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
     <button class="btn btn-danger w-100 mt-2" onclick="resetApp()">Reset</button>
+    <button class="btn btn-success w-100 mt-2" onclick="exportPDF()">Export PDF</button>
+    <button class="btn btn-info w-100 mt-2" onclick="exportExcel()">Export Excel</button>
 
     <div id="winnerDisplay"></div>
     <table id="winnerTable" class="table table-striped mt-4"></table>
 </div>
 
+<audio id="backgroundMusic" src="https://www.soundjay.com/button/beep-07.mp3" loop></audio>
+
 <script>
     let names = [];
 
-    async function handleFileUpload(event) {
+    function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
 
@@ -131,35 +135,22 @@
         }
         
         names = names.sort(() => Math.random() - 0.5);
-
-        const prizes = [
-            { prize: "1st Prize - 6 Gram Gold", count: 1 },
-            { prize: "2nd Prize - 4 Gram Gold", count: 2 },
-            { prize: "3rd Prize - 3 Gram Gold", count: 3 },
-            { prize: "4th Prize - 2 Gram Gold", count: 4 },
-            { prize: "5th Prize - 1 Gram Gold", count: 5 },
-            { prize: "6th Prize - 0.5 Gram Silver", count: 6 }
-        ];
+        document.getElementById("backgroundMusic").play();
 
         const table = document.getElementById('winnerTable');
-        table.innerHTML = '<thead><tr><th>Prize</th><th>Winners</th></tr></thead><tbody></tbody>';
+        table.innerHTML = '<thead><tr><th>Winner</th></tr></thead><tbody></tbody>';
 
-        let winnerIndex = 0;
-        for (const { prize, count } of prizes) {
-            const winners = names.slice(winnerIndex, winnerIndex + count);
+        for (let i = 0; i < names.length; i++) {
+            const winner = names[i];
+            displayWinner(winner);
+            announceWinner(winner);
+            confetti();
+            await new Promise(resolve => setTimeout(resolve, 5000));
             const row = table.insertRow();
-            row.insertCell(0).innerText = prize;
-            row.insertCell(1).innerText = winners.join(', ');
-
-            for (const winner of winners) {
-                displayWinner(winner);
-                announceWinner(winner);
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                confetti();
-            }
-
-            winnerIndex += count;
+            row.insertCell(0).innerText = winner;
         }
+        
+        document.getElementById("backgroundMusic").pause();
     }
 
     function displayWinner(winner) {
@@ -171,6 +162,24 @@
         const speech = new SpeechSynthesisUtterance(`Congratulations ${winner}!`);
         speech.lang = 'en-IN';
         speechSynthesis.speak(speech);
+    }
+
+    function exportPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("Sri Hanumaan Trader's Lucky Draw Winners", 20, 20);
+        const rows = Array.from(document.querySelectorAll("#winnerTable tbody tr")).map(row => [
+            row.cells[0].innerText
+        ]);
+        doc.autoTable({ head: [['Winner']], body: rows });
+        doc.save("winners.pdf");
+    }
+
+    function exportExcel() {
+        const ws = XLSX.utils.table_to_sheet(document.getElementById('winnerTable'));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Winners");
+        XLSX.writeFile(wb, "winners.xlsx");
     }
 
     function resetApp() {
