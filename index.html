@@ -46,6 +46,7 @@ tu<!DOCTYPE html>
 <button class="btn-custom" onclick="exportWinnersPDF()">Download PDF</button>
 <button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
 <button class="btn-custom" onclick="exportWinnersExcel()">Export to Excel</button>
+<button class="btn-custom" onclick="deleteAllParticipants()">Delete All Participants</button>
 
 <!-- Admin Panel -->
 <div id="adminPanel" class="hidden">
@@ -443,6 +444,16 @@ function renderTable() {
             </td>
         </tr>`;
     });
+}
+// Function to delete all participants
+function deleteAllParticipants() {
+    const confirmation = confirm("Are you sure you want to delete all participants?");
+    if (confirmation) {
+        participants = []; // Clear the participant array
+        localStorage.removeItem('participants'); // Remove participants from localStorage
+        renderTable(); // Re-render the table (which will be empty now)
+        alert("All participants have been deleted.");
+    }
 }
 
 </script>
