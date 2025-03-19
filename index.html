@@ -7,8 +7,6 @@
     <title>Sri Hanumaan Trader's Lucky Draw</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
-    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -26,7 +24,7 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             border-radius: 15px;
             padding: 30px;
-            max-width: 600px;
+            max-width: 800px;
             width: 100%;
             text-align: center;
         }
@@ -45,25 +43,25 @@
         button {
             margin: 10px 0;
         }
-        .prize-container {
+        #countdown {
+            font-size: 3rem;
+            color: red;
+            margin: 20px 0;
+            display: none;
+        }
+        table {
             margin-top: 20px;
-            text-align: left;
+            width: 100%;
+            border: 1px solid #007bff;
         }
-        .prize {
-            margin-bottom: 15px;
-            padding: 10px;
+        th, td {
+            padding: 8px;
+            text-align: center;
+            border: 1px solid #007bff;
+        }
+        th {
+            background: #007bff;
             color: #fff;
-            border-radius: 5px;
-            animation: fadeIn 0.8s ease;
-        }
-        .prize:nth-child(1) { background: gold; }
-        .prize:nth-child(2) { background: #c0c0c0; }
-        .prize:nth-child(3) { background: #cd7f32; }
-        .prize:nth-child(4), .prize:nth-child(5), .prize:nth-child(6) { background: #007bff; }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -72,28 +70,45 @@
 <div class="container">
     <h1>Sri Hanumaan Trader's Lucky Draw</h1>
     
-    <!-- Input Section -->
     <textarea id="namesInput" rows="6" placeholder="Enter names, separated by commas..."></textarea>
-    <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
-    <button class="btn btn-success w-100" onclick="exportToPDF()">Export to PDF</button>
-    <button class="btn btn-warning w-100" onclick="exportToExcel()">Export to Excel</button>
+    <button class="btn btn-primary w-100" onclick="startCountdown()">Start Draw</button>
     <button class="btn btn-danger w-100" onclick="resetApp()">Reset</button>
-    
-    <!-- Results Section -->
-    <div id="result" class="prize-container"></div>
+
+    <div id="countdown">3</div>
+    <table id="winnerTable" class="table table-striped mt-4"></table>
 </div>
 
 <script>
+    const goldRate = 6500;  // ₹ per gram
+    const silverRate = 80;  // ₹ per gram
+
     const prizes = [
-        { title: '1st Prize - 6 Gram Gold', count: 1 },
-        { title: '2nd Prize - 4 Gram Gold', count: 2 },
-        { title: '3rd Prize - 3 Gram Gold', count: 3 },
-        { title: '4th Prize - 2 Gram Gold', count: 4 },
-        { title: '5th Prize - 1 Gram Gold', count: 5 },
-        { title: '6th Prize - 0.5 Gram Silver', count: 6 }
+        { title: '1st Prize - 6 Gram Gold', grams: 6, type: 'gold', count: 1 },
+        { title: '2nd Prize - 4 Gram Gold', grams: 4, type: 'gold', count: 2 },
+        { title: '3rd Prize - 3 Gram Gold', grams: 3, type: 'gold', count: 3 },
+        { title: '4th Prize - 2 Gram Gold', grams: 2, type: 'gold', count: 4 },
+        { title: '5th Prize - 1 Gram Gold', grams: 1, type: 'gold', count: 5 },
+        { title: '6th Prize - 0.5 Gram Silver', grams: 0.5, type: 'silver', count: 6 }
     ];
 
-    let winnersList = '';
+    let names = [];
+
+    function startCountdown() {
+        const countdown = document.getElementById('countdown');
+        countdown.style.display = 'block';
+        let count = 3;
+        countdown.innerText = count;
+        
+        const interval = setInterval(() => {
+            count--;
+            countdown.innerText = count;
+            if (count === 0) {
+                clearInterval(interval);
+                countdown.style.display = 'none';
+                startLuckyDraw();
+            }
+        }, 1000);
+    }
 
     function startLuckyDraw() {
         const namesInput = document.getElementById('namesInput').value;
@@ -102,63 +117,44 @@
             return;
         }
         
-        let names = namesInput.split(',').map(name => name.trim()).filter(name => name !== "");
+        names = namesInput.split(',').map(name => name.trim()).filter(name => name !== "");
         if (names.length < 21) {
             alert("You need at least 21 names to run this lucky draw!");
             return;
         }
         
-        // Shuffle names
         names = names.sort(() => Math.random() - 0.5);
 
-        const resultDiv = document.getElementById('result');
-        resultDiv.innerHTML = '';
-        winnersList = 'Sri Hanumaan Trader\'s Lucky Draw Winners\n\n';
+        const table = document.getElementById('winnerTable');
+        table.innerHTML = '<thead><tr><th>Prize</th><th>Winners</th><th>Value (INR)</th></tr></thead><tbody></tbody>';
+        
+        announceWinners(0, 0);
+    }
 
-        let currentIndex = 0;
-        prizes.forEach((prize) => {
-            const winners = names.slice(currentIndex, currentIndex + prize.count);
-            currentIndex += prize.count;
+    function announceWinners(prizeIndex, currentIndex) {
+        if (prizeIndex >= prizes.length) return;
+        
+        const prize = prizes[prizeIndex];
+        const winners = names.slice(currentIndex, currentIndex + prize.count);
+        currentIndex += prize.count;
 
-            winnersList += `${prize.title}: ${winners.join(', ')}\n`;
+        const value = prize.type === 'gold' ? prize.grams * goldRate : prize.grams * silverRate;
+        const formattedValue = new Intl.NumberFormat('en-IN').format(value);
 
-            // Display winners with animation
-            const prizeDiv = document.createElement('div');
-            prizeDiv.className = 'prize';
-            prizeDiv.innerHTML = `<h5>${prize.title}</h5><p>${winners.join(', ')}</p>`;
-            resultDiv.appendChild(prizeDiv);
-        });
+        const row = document.getElementById('winnerTable').insertRow();
+        row.insertCell(0).innerText = prize.title;
+        row.insertCell(1).innerText = winners.join(', ');
+        row.insertCell(2).innerText = `₹${formattedValue}`;
 
-        // Confetti celebration
         launchConfetti();
+        alert(`🏆 ${prize.title}\nWinner(s): ${winners.join(', ')}\nValue: ₹${formattedValue}`);
+        
+        setTimeout(() => announceWinners(prizeIndex + 1, currentIndex), 5000);
     }
 
     function resetApp() {
         document.getElementById('namesInput').value = '';
-        document.getElementById('result').innerHTML = '';
-        winnersList = '';
-    }
-
-    function exportToPDF() {
-        if (!winnersList) {
-            alert("Please run the Lucky Draw first!");
-            return;
-        }
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text(winnersList, 10, 10);
-        doc.save("Lucky_Draw_Winners.pdf");
-    }
-
-    function exportToExcel() {
-        if (!winnersList) {
-            alert("Please run the Lucky Draw first!");
-            return;
-        }
-        const workbook = XLSX.utils.book_new();
-        const sheet = XLSX.utils.aoa_to_sheet(winnersList.split('\n').map(row => [row]));
-        XLSX.utils.book_append_sheet(workbook, sheet, "Winners");
-        XLSX.writeFile(workbook, "Lucky_Draw_Winners.xlsx");
+        document.getElementById('winnerTable').innerHTML = '';
     }
 
     function launchConfetti() {
