@@ -5,187 +5,178 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Sri Hanumaan Trader's Lucky Draw</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfjs-dist/3.9.179/pdf.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background: url('https://via.placeholder.com/1920x1080') no-repeat center center fixed;
-            background-size: cover;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            background: rgba(255, 255, 255, 0.95);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-            border-radius: 15px;
-            padding: 30px;
-            max-width: 900px;
-            width: 100%;
+            background: #000;
+            color: #fff;
             text-align: center;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
         }
         h1 {
-            color: #007bff;
-            text-shadow: 0 0 10px #007bff;
+            color: #FFD700;
+            margin-top: 20px;
+            font-size: 2.5rem;
         }
-        textarea, input[type="file"] {
-            width: 100%;
-            margin-bottom: 20px;
-            padding: 10px;
-            border: 1px solid #007bff;
+        #container {
+            margin: 20px;
+        }
+        .winner {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: #FFD700;
+            animation: glow 1.5s infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #FFD700; }
+            to { text-shadow: 0 0 20px #FFD700; }
+        }
+        .hidden {
+            display: none;
+        }
+        #countdown {
+            font-size: 3rem;
+            color: #FF6347;
+        }
+        .btn-custom {
+            margin: 10px;
+            background: #FFD700;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
             border-radius: 5px;
         }
-        #winnerDisplay {
-            margin: 20px 0;
-            font-size: 2rem;
-            color: #d9534f;
-            font-weight: bold;
-            animation: fadeIn 1s ease;
-        }
-        table {
+        #musicControl {
             margin-top: 20px;
-            width: 100%;
-            border: 1px solid #007bff;
-        }
-        th, td {
-            padding: 8px;
-            text-align: center;
-            border: 1px solid #007bff;
-        }
-        th {
-            background: #007bff;
-            color: #fff;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
-<div class="container">
+<div id="container">
     <h1>Sri Hanumaan Trader's Lucky Draw</h1>
+    <button class="btn-custom" onclick="startShow()">Start Show</button>
+    <button class="btn-custom" onclick="toggleFullscreen()">Full Screen</button>
+    <button class="btn-custom" onclick="exportWinnersPDF()">Export Winners (PDF)</button>
+    <button class="btn-custom" onclick="exportWinnersExcel()">Export Winners (Excel)</button>
 
-    <input type="file" id="fileInput" accept=".pdf, .xlsx, .xls" onchange="handleFileUpload(event)">
-    <textarea id="namesInput" rows="6" placeholder="Or enter names manually, separated by commas..."></textarea>
-    <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
-    <button class="btn btn-danger w-100 mt-2" onclick="resetApp()">Reset</button>
-    <button class="btn btn-success w-100 mt-2" onclick="exportPDF()">Export PDF</button>
-    <button class="btn btn-info w-100 mt-2" onclick="exportExcel()">Export Excel</button>
+    <div id="countdown" class="hidden"></div>
+    <h2 id="prizeTitle" class="hidden"></h2>
+    <div id="winnerName" class="winner hidden"></div>
 
-    <div id="winnerDisplay"></div>
-    <table id="winnerTable" class="table table-striped mt-4"></table>
+    <div id="musicControl">
+        <button class="btn-custom" onclick="toggleMusic()">Play/Pause Music</button>
+        <audio id="bgMusic" loop>
+            <source src="background-music.mp3" type="audio/mpeg">
+        </audio>
+    </div>
 </div>
 
-<audio id="backgroundMusic" src="https://www.soundjay.com/button/beep-07.mp3" loop></audio>
-
 <script>
-    let names = [];
+    const winners = [
+        { prize: '1st Prize: 6 Gram Gold', names: ['Winner 1'] },
+        { prize: '2nd Prize: 4 Gram Gold', names: ['Winner 2', 'Winner 3'] },
+        { prize: '3rd Prize: 3 Gram Gold', names: ['Winner 4', 'Winner 5', 'Winner 6'] },
+        { prize: '4th Prize: 2 Gram Gold', names: ['Winner 7', 'Winner 8', 'Winner 9', 'Winner 10'] },
+        { prize: '5th Prize: 1 Gram Gold', names: ['Winner 11', 'Winner 12', 'Winner 13', 'Winner 14', 'Winner 15'] },
+        { prize: '6th Prize: 0.5 Silver', names: ['Winner 16', 'Winner 17', 'Winner 18', 'Winner 19', 'Winner 20', 'Winner 21'] }
+    ];
 
-    function handleFileUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
+    let currentPrize = 0;
+    let currentWinner = 0;
 
-        const reader = new FileReader();
+    function startShow() {
+        document.querySelector('.btn-custom').style.display = 'none';
+        announcePrize();
+    }
 
-        if (file.type === "application/pdf") {
-            reader.onload = async function (e) {
-                const pdfData = new Uint8Array(e.target.result);
-                const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
-                let extractedText = "";
-
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const textContent = await page.getTextContent();
-                    const textItems = textContent.items.map(item => item.str);
-                    extractedText += textItems.join(" ") + " ";
-                }
-
-                names = extractedText.split(/[,\n\s]+/).filter(name => name.trim());
-                document.getElementById('namesInput').value = names.join(", ");
-            };
-            reader.readAsArrayBuffer(file);
-
-        } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-            reader.onload = function (e) {
-                const workbook = XLSX.read(e.target.result, { type: 'binary' });
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-                names = data.flat().filter(name => name);
-                document.getElementById('namesInput').value = names.join(", ");
-            };
-            reader.readAsBinaryString(file);
+    function announcePrize() {
+        if (currentPrize < winners.length) {
+            const prize = winners[currentPrize];
+            document.getElementById('prizeTitle').innerText = prize.prize;
+            document.getElementById('prizeTitle').classList.remove('hidden');
+            currentWinner = 0;
+            showCountdown(() => announceWinner(prize));
+        } else {
+            showThankYou();
         }
     }
 
-    async function startLuckyDraw() {
-        const namesInput = document.getElementById('namesInput').value;
-        names = namesInput.split(',').map(name => name.trim()).filter(name => name !== "");
-        if (names.length < 21) {
-            alert("You need at least 21 names to run this lucky draw!");
-            return;
+    function showCountdown(callback) {
+        let countdown = 5;
+        const countdownEl = document.getElementById('countdown');
+        countdownEl.classList.remove('hidden');
+        const interval = setInterval(() => {
+            countdownEl.innerText = countdown;
+            countdown--;
+            if (countdown < 0) {
+                clearInterval(interval);
+                countdownEl.classList.add('hidden');
+                callback();
+            }
+        }, 1000);
+    }
+
+    function announceWinner(prize) {
+        if (currentWinner < prize.names.length) {
+            const winnerName = document.getElementById('winnerName');
+            winnerName.innerText = prize.names[currentWinner];
+            winnerName.classList.remove('hidden');
+            currentWinner++;
+            setTimeout(() => announceWinner(prize), 5000);
+        } else {
+            currentPrize++;
+            setTimeout(announcePrize, 3000);
         }
-        
-        names = names.sort(() => Math.random() - 0.5);
-        document.getElementById("backgroundMusic").play();
+    }
 
-        const table = document.getElementById('winnerTable');
-        table.innerHTML = '<thead><tr><th>Winner</th></tr></thead><tbody></tbody>';
+    function showThankYou() {
+        document.getElementById('prizeTitle').innerText = 'Thank You for Participating!';
+        document.getElementById('winnerName').classList.add('hidden');
+    }
 
-        for (let i = 0; i < names.length; i++) {
-            const winner = names[i];
-            displayWinner(winner);
-            announceWinner(winner);
-            confetti();
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            const row = table.insertRow();
-            row.insertCell(0).innerText = winner;
+    function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen();
+        } else if (document.exitFullscreen) {
+            document.exitFullscreen();
         }
-        
-        document.getElementById("backgroundMusic").pause();
     }
 
-    function displayWinner(winner) {
-        const winnerDisplay = document.getElementById('winnerDisplay');
-        winnerDisplay.innerText = `Winner: ${winner}`;
+    function toggleMusic() {
+        const bgMusic = document.getElementById('bgMusic');
+        if (bgMusic.paused) {
+            bgMusic.play();
+        } else {
+            bgMusic.pause();
+        }
     }
 
-    function announceWinner(winner) {
-        const speech = new SpeechSynthesisUtterance(`Congratulations ${winner}!`);
-        speech.lang = 'en-IN';
-        speechSynthesis.speak(speech);
+    function exportWinnersPDF() {
+        const docDefinition = { content: ['Sri Hanumaan Trader\'s Lucky Draw Winners\n\n'] };
+        winners.forEach(prize => {
+            docDefinition.content.push(prize.prize);
+            docDefinition.content.push(prize.names.join(', ') + '\n\n');
+        });
+        pdfMake.createPdf(docDefinition).download('winners.pdf');
     }
 
-    function exportPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text("Sri Hanumaan Trader's Lucky Draw Winners", 20, 20);
-        const rows = Array.from(document.querySelectorAll("#winnerTable tbody tr")).map(row => [
-            row.cells[0].innerText
-        ]);
-        doc.autoTable({ head: [['Winner']], body: rows });
-        doc.save("winners.pdf");
-    }
-
-    function exportExcel() {
-        const ws = XLSX.utils.table_to_sheet(document.getElementById('winnerTable'));
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Winners");
-        XLSX.writeFile(wb, "winners.xlsx");
-    }
-
-    function resetApp() {
-        document.getElementById('namesInput').value = '';
-        document.getElementById('winnerDisplay').innerText = '';
-        document.getElementById('winnerTable').innerHTML = '';
+    function exportWinnersExcel() {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        winners.forEach(prize => {
+            csvContent += `${prize.prize}\n${prize.names.join(', ')}\n\n`;
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "winners.csv");
+        document.body.appendChild(link);
+        link.click();
     }
 </script>
 
