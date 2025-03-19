@@ -45,7 +45,7 @@
     </table>
 </div>
 
-<!-- Lucky Draw Section (Hidden in Admin Panel) -->
+<!-- Lucky Draw Section -->
 <div id="drawSection" class="hidden">
     <h2>Lucky Draw Winner</h2>
     <div id="prizeTitle"></div>
@@ -57,16 +57,15 @@
     let participants = JSON.parse(localStorage.getItem('participants')) || [];
     let winners = JSON.parse(localStorage.getItem('winners')) || [];
     let editIndex = -1;
-    
-    // Prize structure
+
     const prizes = [
         { prize: '1st Prize - 6 Gram Gold', count: 1 },
         { prize: '2nd Prize - 4 Gram Gold', count: 2 }
     ];
-    
+
     let currentPrizeIndex = 0;
 
-    // Show/Hide Admin Panel
+    // Toggle Admin Panel
     function toggleAdminPanel() {
         const adminPanel = document.getElementById('adminPanel');
         const drawSection = document.getElementById('drawSection');
@@ -75,11 +74,10 @@
         renderTable();
     }
 
-    // Add or Update Participant
+    // Add Participant
     function addParticipant() {
         const name = document.getElementById('participantName').value.trim();
         const traderAddress = document.getElementById('traderAddress').value.trim();
-
         if (name && traderAddress) {
             if (editIndex === -1) {
                 participants.push({ name, traderAddress });
@@ -93,20 +91,6 @@
         } else {
             alert("Please enter both Name and Trader Address.");
         }
-    }
-
-    // Edit Participant
-    function editParticipant(index) {
-        document.getElementById('participantName').value = participants[index].name;
-        document.getElementById('traderAddress').value = participants[index].traderAddress;
-        editIndex = index;
-    }
-
-    // Delete Participant
-    function deleteParticipant(index) {
-        participants.splice(index, 1);
-        localStorage.setItem('participants', JSON.stringify(participants));
-        renderTable();
     }
 
     // Render Participant Table
@@ -126,10 +110,34 @@
         });
     }
 
-    // Clear Input Fields
-    function clearInputs() {
-        document.getElementById('participantName').value = '';
-        document.getElementById('traderAddress').value = '';
+    // Start Lucky Draw
+    function startDraw() {
+        const prize = prizes[currentPrizeIndex];
+        if (!prize) {
+            alert("All prizes drawn!");
+            return;
+        }
+
+        const eligibleParticipants = participants.filter(p => !winners.find(w => w.name === p.name));
+        if (eligibleParticipants.length < prize.count) {
+            alert("Not enough participants left for this prize!");
+            return;
+        }
+
+        const selectedWinners = [];
+        for (let i = 0; i < prize.count; i++) {
+            const randomIndex = Math.floor(Math.random() * eligibleParticipants.length);
+            selectedWinners.push(eligibleParticipants.splice(randomIndex, 1)[0]);
+        }
+
+        selectedWinners.forEach(w => winners.push({ ...w, prize: prize.prize }));
+        localStorage.setItem('winners', JSON.stringify(winners));
+
+        // Show winner names
+        document.getElementById('drawSection').classList.remove('hidden');
+        document.getElementById('prizeTitle').textContent = prize.prize;
+        document.getElementById('winnerName').textContent = selectedWinners.map(w => w.name).join(", ");
+        currentPrizeIndex++;
     }
 
     // Export Winners PDF
@@ -143,11 +151,11 @@
 
     // Export Winners Excel (CSV)
     function exportWinnersExcel() {
-        let csvContent = "data:text/csv;charset=utf-8,No,Name,Trader Address,Prize\n";
+        let csvContent = "No,Name,Trader Address,Prize\n";
         winners.forEach((w, index) => {
             csvContent += `${index + 1},${w.name},${w.traderAddress},${w.prize}\n`;
         });
-        const encodedUri = encodeURI(csvContent);
+        const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
         link.setAttribute("download", "winners.csv");
@@ -155,7 +163,11 @@
         link.click();
     }
 
-    // Init
+    function clearInputs() {
+        document.getElementById('participantName').value = '';
+        document.getElementById('traderAddress').value = '';
+    }
+
     renderTable();
 </script>
 
