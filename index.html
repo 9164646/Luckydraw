@@ -7,6 +7,7 @@
     <title>Sri Hanumaan Trader's Lucky Draw</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <style>
         /* General */
         body {
@@ -70,6 +71,7 @@
     <!-- Input Section -->
     <textarea id="namesInput" rows="6" placeholder="Enter names, separated by commas..."></textarea>
     <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
+    <button class="btn btn-success w-100" onclick="exportToPDF()">Export to PDF</button>
     <button class="btn btn-danger w-100" onclick="resetApp()">Reset</button>
     
     <!-- Results Section -->
@@ -77,6 +79,9 @@
 </div>
 
 <script>
+    const prizeDistribution = [1, 2, 3, 4, 5, 6];
+    let winnersList = '';
+
     function startLuckyDraw() {
         const namesInput = document.getElementById('namesInput').value;
         if (!namesInput) {
@@ -93,16 +98,17 @@
         // Shuffle names
         names = names.sort(() => Math.random() - 0.5);
 
-        // Prize distribution
-        const prizeDistribution = [1, 2, 3, 4, 5, 6];
         const resultDiv = document.getElementById('result');
         resultDiv.innerHTML = '';
+        winnersList = 'Sri Hanumaan Trader\'s Lucky Draw Winners\n\n';
 
         let currentIndex = 0;
         prizeDistribution.forEach((prize, index) => {
             const prizeLevel = `${index + 1} Prize - ${prize} Winner${prize > 1 ? 's' : ''}`;
             const winners = names.slice(currentIndex, currentIndex + prize);
             currentIndex += prize;
+
+            winnersList += `${prizeLevel}: ${winners.join(', ')}\n`;
 
             // Display winners with animation
             const prizeDiv = document.createElement('div');
@@ -118,6 +124,18 @@
     function resetApp() {
         document.getElementById('namesInput').value = '';
         document.getElementById('result').innerHTML = '';
+        winnersList = '';
+    }
+
+    function exportToPDF() {
+        if (!winnersList) {
+            alert("Please run the Lucky Draw first!");
+            return;
+        }
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text(winnersList, 10, 10);
+        doc.save("Lucky_Draw_Winners.pdf");
     }
 
     function launchConfetti() {
