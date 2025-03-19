@@ -33,6 +33,42 @@
     <input type="text" id="traderAddress" placeholder="Enter Trader Address" class="form-control mb-2">
     <button class="btn-custom" onclick="addParticipant()">Add/Update</button>
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Sri Hanumaan Trader's Lucky Draw</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
+    <style>
+        body { background: #000; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        h1 { color: #FFD700; margin-bottom: 20px; }
+        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
+        table { width: 100%; background: #fff; color: #000; margin-top: 20px; border-radius: 5px; }
+        th, td { padding: 10px; border: 1px solid #ddd; }
+        #winnerList { margin-top: 20px; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<h1>Sri Hanumaan Trader's Lucky Draw</h1>
+<button class="btn-custom" onclick="toggleAdminPanel()">Admin Panel</button>
+<button id="startDrawBtn" class="btn-custom" onclick="startDraw()">Start Lucky Draw</button>
+<button class="btn-custom" onclick="exportWinnersPDF()">Download PDF</button>
+<button class="btn-custom" onclick="exportWinnersExcel()">Download Excel</button>
+<button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
+
+<!-- Admin Panel -->
+<div id="adminPanel" class="hidden">
+    <h2>Manage Participants</h2>
+    <input type="text" id="participantName" placeholder="Enter Name" class="form-control mb-2">
+    <input type="text" id="traderAddress" placeholder="Enter Trader Address" class="form-control mb-2">
+    <button class="btn-custom" onclick="addParticipant()">Add/Update</button>
+
     <table id="participantTable" class="table table-bordered mt-3">
         <thead><tr><th>S. No</th><th>Name</th><th>Trader Address</th><th>Actions</th></tr></thead>
         <tbody></tbody>
@@ -56,7 +92,6 @@
         { prize: '5th Prize - 1 Gram Gold', count: 5, gift: '1 Gram Gold' },
         { prize: '6th Prize - 0.5 Gram Silver', count: 6, gift: '0.5 Gram Silver' }
     ];
-    let currentPrizeIndex = 0;
 
     // Toggle Admin Panel
     function toggleAdminPanel() {
@@ -100,18 +135,29 @@
         });
     }
 
-    // Start Draw
+    // Start Draw with Validation
     function startDraw() {
+        const totalWinnersNeeded = prizes.reduce((acc, prize) => acc + prize.count, 0);
+        if (participants.length < totalWinnersNeeded) {
+            alert("Not enough participants to conduct the draw!");
+            return;
+        }
+
+        if (winners.length > 0) {
+            alert("Lucky Draw already completed!");
+            return;
+        }
+
         prizes.forEach(prize => {
             const eligible = participants.filter(p => !winners.find(w => w.name === p.name));
             for (let i = 0; i < prize.count; i++) {
-                if (eligible.length === 0) break;
                 const randomIndex = Math.floor(Math.random() * eligible.length);
                 winners.push({ ...eligible.splice(randomIndex, 1)[0], prize: prize.prize, gift: prize.gift });
             }
         });
 
         localStorage.setItem('winners', JSON.stringify(winners));
+        document.getElementById('startDrawBtn').disabled = true;
         showWinners();
     }
 
@@ -126,29 +172,16 @@
             prizeWinners.forEach(w => html += `<tr><td>${w.name}</td><td>${w.traderAddress}</td><td>${w.gift}</td></tr>`);
             html += "</table>";
         });
-
-        html += "<h3>Common Gift</h3><table class='table'><tr><th>Name</th><th>Trader Address</th><th>Gift</th></tr>";
-        participants.forEach(p => html += `<tr><td>${p.name}</td><td>${p.traderAddress}</td><td>Common Gift</td></tr>`);
-        html += "</table>";
-
         winnerList.innerHTML = html;
     }
 
-    // Export Winners PDF
-    function exportWinnersPDF() {
-        const docDefinition = { content: ['Sri Hanumaan Trader\'s Lucky Draw Winners\n\n'] };
-        winners.forEach(w => docDefinition.content.push(`${w.name} - ${w.traderAddress} (${w.prize} - ${w.gift})\n`));
-        pdfMake.createPdf(docDefinition).download('winners.pdf');
-    }
-
-    // Export Winners Excel
-    function exportWinnersExcel() {
-        let csv = "Name,Trader Address,Prize,Gift\n";
-        winners.forEach(w => csv += `${w.name},${w.traderAddress},${w.prize},${w.gift}\n`);
-        const link = document.createElement("a");
-        link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
-        link.download = "winners.csv";
-        link.click();
+    // Reset Winners
+    function resetWinners() {
+        winners = [];
+        localStorage.removeItem('winners');
+        document.getElementById('startDrawBtn').disabled = false;
+        document.getElementById('winnerList').innerHTML = '';
+        alert("Winners reset successfully!");
     }
 
     renderTable();
