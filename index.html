@@ -28,7 +28,7 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
             border-radius: 15px;
             padding: 30px;
-            max-width: 420px;
+            max-width: 450px;
             width: 100%;
             text-align: center;
             animation: fadeIn 0.5s ease-out;
@@ -71,26 +71,25 @@
             font-weight: bold;
             animation: fadeIn 0.5s ease;
         }
-        .btn-primary, .btn-secondary, .btn-dark, .btn-success {
+        .winner-popup {
+            background: #007bff;
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            margin-top: 20px;
+            animation: popUp 0.5s ease-out;
+        }
+        @keyframes popUp {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        .btn-primary, .btn-secondary, .btn-dark {
             margin-bottom: 10px;
             transition: background 0.2s, transform 0.1s;
         }
-        .btn-primary:hover, .btn-secondary:hover, .btn-dark:hover, .btn-success:hover {
+        .btn-primary:hover, .btn-secondary:hover, .btn-dark:hover {
             transform: translateY(-2px);
-        }
-        #winnerHistory {
-            max-height: 150px;
-            overflow-y: auto;
-            margin-top: 20px;
-            text-align: left;
-            border: 1px solid #007bff;
-            padding: 10px;
-            border-radius: 8px;
-            background: #f8f9fa;
-        }
-        .dark-mode #winnerHistory {
-            background: #2c2c2c;
-            color: #ffffff;
         }
     </style>
 </head>
@@ -98,32 +97,34 @@
     <div class="lucky-draw-container">
         <h1>Lucky Draw</h1>
         <input type="text" id="namesInput" class="form-control" placeholder="Enter names separated by commas">
+        <input type="number" id="winnerCount" class="form-control" placeholder="Number of Winners" min="1">
         <input type="number" id="timerInput" class="form-control" placeholder="Countdown (seconds)" min="0">
         <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
-        <button class="btn btn-secondary w-100" onclick="resetApp()">Reset Names</button>
+        <button class="btn btn-secondary w-100" onclick="restartApp()">Restart Test</button>
         <button class="btn btn-dark w-100" onclick="toggleDarkMode()">Toggle Dark Mode</button>
-        <button class="btn btn-success w-100" onclick="exportWinners()">Export Winners</button>
 
         <div class="progress">
             <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%;"></div>
         </div>
         <div id="result"></div>
-        <h4 class="mt-4">Winner History</h4>
-        <div id="winnerHistory"></div>
     </div>
 
     <script>
-        const winners = [];
-
         function startLuckyDraw() {
-            const namesInput = document.getElementById('namesInput');
-            const names = namesInput.value.split(',').map(name => name.trim()).filter(name => name !== "");
+            const namesInput = document.getElementById('namesInput').value;
+            const names = namesInput.split(',').map(name => name.trim()).filter(name => name !== "");
+            const winnerCount = parseInt(document.getElementById('winnerCount').value) || 1;
+            const timer = parseInt(document.getElementById('timerInput').value) || 0;
+
             if (names.length === 0) {
                 alert("Please enter at least one name!");
                 return;
             }
+            if (winnerCount > names.length) {
+                alert("Number of winners cannot exceed the number of participants!");
+                return;
+            }
 
-            const timer = parseInt(document.getElementById('timerInput').value) || 0;
             let progress = 0;
             const progressBar = document.getElementById('progressBar');
             const result = document.getElementById('result');
@@ -136,38 +137,21 @@
 
                 if (progress >= 100) {
                     clearInterval(interval);
-                    const winner = names[Math.floor(Math.random() * names.length)];
-                    result.innerHTML = `Winner: <strong>${winner}</strong> 🎉`;
-                    winners.push(winner);
+                    const shuffledNames = names.sort(() => 0.5 - Math.random());
+                    const winners = shuffledNames.slice(0, winnerCount);
+                    result.innerHTML = winners.map(w => `<div class="winner-popup">🎉 Winner: ${w}</div>`).join('');
                     playWinnerSound();
                     launchConfetti();
-                    updateWinnerHistory();
                 }
             }, 100);
         }
 
-        function resetApp() {
+        function restartApp() {
             document.getElementById('namesInput').value = '';
+            document.getElementById('winnerCount').value = '';
             document.getElementById('timerInput').value = '';
             document.getElementById('progressBar').style.width = '0%';
             document.getElementById('result').innerHTML = '';
-        }
-
-        function updateWinnerHistory() {
-            const historyDiv = document.getElementById('winnerHistory');
-            historyDiv.innerHTML = winners.length === 0 ? '<em>No winners yet</em>' : winners.map((w, i) => `${i + 1}. ${w}`).join('<br>');
-        }
-
-        function exportWinners() {
-            if (winners.length === 0) {
-                alert('No winners to export.');
-                return;
-            }
-            const blob = new Blob([winners.join('\n')], { type: 'text/plain' });
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'winner-history.txt';
-            link.click();
         }
 
         function playWinnerSound() {
@@ -177,8 +161,8 @@
 
         function launchConfetti() {
             confetti({
-                particleCount: 100,
-                spread: 70,
+                particleCount: 200,
+                spread: 100,
                 origin: { y: 0.6 }
             });
         }
