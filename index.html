@@ -252,6 +252,7 @@ function showWinners() {
         };
         pdfMake.createPdf(docDefinition).download('Winners_List.pdf');
     }
+   
 
     // Reset Winners with confirmation
     function resetWinners() {
@@ -265,6 +266,43 @@ function showWinners() {
     }
 
     renderTable();
+
+    window.onload = function () {
+    if (winners.length > 0) {
+        document.getElementById('startDrawBtn').disabled = true;
+        showWinners();
+    }
+};
+window.scrollTo({ top: document.getElementById('winnerList').offsetTop, behavior: 'smooth' });
+function startDraw() {
+    if (participants.length === 0) {
+        alert("No participants available for the draw!");
+        return;
+    }
+    // Existing draw logic...
+}
+
+    function exportWinnersPDF() {
+    const docDefinition = {
+        content: [
+            { text: 'Sri Hanumaan Trader\'s Lucky Draw Winners', style: 'header' },
+            {
+                table: {
+                    headerRows: 1,
+                    widths: ['auto', '*', '*', '*', '*'],
+                    body: [
+                        ['S.No', 'Name', 'Trader Address', 'Prize', 'Gift'],
+                        ...winners.map((w, i) => [i + 1, w.name, w.traderAddress, w.prize, w.gift])
+                    ]
+                }
+            }
+        ],
+        styles: { header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] } }
+    };
+    pdfMake.createPdf(docDefinition).download('Winners_List.pdf');
+}
+
+    
 </script>
 
 </body>
