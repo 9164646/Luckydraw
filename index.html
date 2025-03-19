@@ -14,17 +14,13 @@
         .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
         table { width: 100%; background: #fff; color: #000; margin-top: 20px; border-radius: 5px; }
         th, td { padding: 10px; border: 1px solid #ddd; }
-        #winnerName { font-size: 2rem; color: #FFD700; margin-top: 20px; animation: glow 1.5s infinite alternate; }
-        @keyframes glow { from { text-shadow: 0 0 10px #FFD700; } to { text-shadow: 0 0 20px #FFD700; } }
-        #countdown { font-size: 4rem; color: #FF6347; margin: 20px 0; }
-        #prizeTitle { font-size: 2rem; color: #00FF00; margin-top: 20px; }
+        #winnerList { margin-top: 20px; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
 
 <h1>Sri Hanumaan Trader's Lucky Draw</h1>
-
 <button class="btn-custom" onclick="toggleAdminPanel()">Admin Panel</button>
 <button class="btn-custom" onclick="startDraw()">Start Lucky Draw</button>
 <button class="btn-custom" onclick="exportWinnersPDF()">Download PDF</button>
@@ -38,43 +34,38 @@
     <button class="btn-custom" onclick="addParticipant()">Add/Update</button>
 
     <table id="participantTable" class="table table-bordered mt-3">
-        <thead>
-            <tr><th>S. No</th><th>Name</th><th>Trader Address</th><th>Actions</th></tr>
-        </thead>
+        <thead><tr><th>S. No</th><th>Name</th><th>Trader Address</th><th>Actions</th></tr></thead>
         <tbody></tbody>
     </table>
 </div>
 
-<!-- Lucky Draw Section -->
-<div id="drawSection" class="hidden">
-    <h2>Lucky Draw Winner</h2>
-    <div id="prizeTitle"></div>
-    <div id="countdown"></div>
-    <div id="winnerName"></div>
-</div>
+<!-- Winners Section -->
+<div id="winnerList" class="hidden"></div>
 
 <script>
     let participants = JSON.parse(localStorage.getItem('participants')) || [];
     let winners = JSON.parse(localStorage.getItem('winners')) || [];
     let editIndex = -1;
 
+    // Prize structure
     const prizes = [
-        { prize: '1st Prize - 6 Gram Gold', count: 1 },
-        { prize: '2nd Prize - 4 Gram Gold', count: 2 }
+        { prize: '1st Prize - 6 Gram Gold', count: 1, gift: '6 Gram Gold' },
+        { prize: '2nd Prize - 4 Gram Gold', count: 2, gift: '4 Gram Gold' },
+        { prize: '3rd Prize - 3 Gram Gold', count: 3, gift: '3 Gram Gold' },
+        { prize: '4th Prize - 2 Gram Gold', count: 4, gift: '2 Gram Gold' },
+        { prize: '5th Prize - 1 Gram Gold', count: 5, gift: '1 Gram Gold' },
+        { prize: '6th Prize - 0.5 Gram Silver', count: 6, gift: '0.5 Gram Silver' }
     ];
-
     let currentPrizeIndex = 0;
 
     // Toggle Admin Panel
     function toggleAdminPanel() {
-        const adminPanel = document.getElementById('adminPanel');
-        const drawSection = document.getElementById('drawSection');
-        adminPanel.classList.toggle('hidden');
-        drawSection.classList.add('hidden');
+        document.getElementById('adminPanel').classList.toggle('hidden');
+        document.getElementById('winnerList').classList.add('hidden');
         renderTable();
     }
 
-    // Add Participant
+    // Add/Update Participant
     function addParticipant() {
         const name = document.getElementById('participantName').value.trim();
         const traderAddress = document.getElementById('traderAddress').value.trim();
@@ -87,7 +78,6 @@
             }
             localStorage.setItem('participants', JSON.stringify(participants));
             renderTable();
-            clearInputs();
         } else {
             alert("Please enter both Name and Trader Address.");
         }
@@ -110,62 +100,55 @@
         });
     }
 
-    // Start Lucky Draw
+    // Start Draw
     function startDraw() {
-        const prize = prizes[currentPrizeIndex];
-        if (!prize) {
-            alert("All prizes drawn!");
-            return;
-        }
+        prizes.forEach(prize => {
+            const eligible = participants.filter(p => !winners.find(w => w.name === p.name));
+            for (let i = 0; i < prize.count; i++) {
+                if (eligible.length === 0) break;
+                const randomIndex = Math.floor(Math.random() * eligible.length);
+                winners.push({ ...eligible.splice(randomIndex, 1)[0], prize: prize.prize, gift: prize.gift });
+            }
+        });
 
-        const eligibleParticipants = participants.filter(p => !winners.find(w => w.name === p.name));
-        if (eligibleParticipants.length < prize.count) {
-            alert("Not enough participants left for this prize!");
-            return;
-        }
-
-        const selectedWinners = [];
-        for (let i = 0; i < prize.count; i++) {
-            const randomIndex = Math.floor(Math.random() * eligibleParticipants.length);
-            selectedWinners.push(eligibleParticipants.splice(randomIndex, 1)[0]);
-        }
-
-        selectedWinners.forEach(w => winners.push({ ...w, prize: prize.prize }));
         localStorage.setItem('winners', JSON.stringify(winners));
+        showWinners();
+    }
 
-        // Show winner names
-        document.getElementById('drawSection').classList.remove('hidden');
-        document.getElementById('prizeTitle').textContent = prize.prize;
-        document.getElementById('winnerName').textContent = selectedWinners.map(w => w.name).join(", ");
-        currentPrizeIndex++;
+    // Show Winners
+    function showWinners() {
+        const winnerList = document.getElementById('winnerList');
+        winnerList.classList.remove('hidden');
+        let html = "<h2>Winners List</h2>";
+        prizes.forEach(prize => {
+            const prizeWinners = winners.filter(w => w.prize === prize.prize);
+            html += `<h3>${prize.prize}</h3><table class="table"><tr><th>Name</th><th>Trader Address</th><th>Gift</th></tr>`;
+            prizeWinners.forEach(w => html += `<tr><td>${w.name}</td><td>${w.traderAddress}</td><td>${w.gift}</td></tr>`);
+            html += "</table>";
+        });
+
+        html += "<h3>Common Gift</h3><table class='table'><tr><th>Name</th><th>Trader Address</th><th>Gift</th></tr>";
+        participants.forEach(p => html += `<tr><td>${p.name}</td><td>${p.traderAddress}</td><td>Common Gift</td></tr>`);
+        html += "</table>";
+
+        winnerList.innerHTML = html;
     }
 
     // Export Winners PDF
     function exportWinnersPDF() {
         const docDefinition = { content: ['Sri Hanumaan Trader\'s Lucky Draw Winners\n\n'] };
-        winners.forEach((w, index) => {
-            docDefinition.content.push(`${index + 1}. ${w.name} - ${w.traderAddress} (${w.prize})\n`);
-        });
+        winners.forEach(w => docDefinition.content.push(`${w.name} - ${w.traderAddress} (${w.prize} - ${w.gift})\n`));
         pdfMake.createPdf(docDefinition).download('winners.pdf');
     }
 
-    // Export Winners Excel (CSV)
+    // Export Winners Excel
     function exportWinnersExcel() {
-        let csvContent = "No,Name,Trader Address,Prize\n";
-        winners.forEach((w, index) => {
-            csvContent += `${index + 1},${w.name},${w.traderAddress},${w.prize}\n`;
-        });
-        const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+        let csv = "Name,Trader Address,Prize,Gift\n";
+        winners.forEach(w => csv += `${w.name},${w.traderAddress},${w.prize},${w.gift}\n`);
         const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "winners.csv");
-        document.body.appendChild(link);
+        link.href = "data:text/csv;charset=utf-8," + encodeURI(csv);
+        link.download = "winners.csv";
         link.click();
-    }
-
-    function clearInputs() {
-        document.getElementById('participantName').value = '';
-        document.getElementById('traderAddress').value = '';
     }
 
     renderTable();
