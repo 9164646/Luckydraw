@@ -6,6 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Sri Hanumaan Trader's Lucky Draw</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfjs-dist/3.9.179/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -41,11 +42,12 @@
             border: 1px solid #007bff;
             border-radius: 5px;
         }
-        #countdown {
-            font-size: 3rem;
-            color: red;
+        #winnerDisplay {
             margin: 20px 0;
-            display: none;
+            font-size: 2rem;
+            color: #d9534f;
+            font-weight: bold;
+            animation: fadeIn 1s ease;
         }
         table {
             margin-top: 20px;
@@ -61,10 +63,9 @@
             background: #007bff;
             color: #fff;
         }
-        .btn-container {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-around;
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -73,35 +74,52 @@
 <div class="container">
     <h1>Sri Hanumaan Trader's Lucky Draw</h1>
 
-    <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="handleFileUpload(event)">
+    <input type="file" id="fileInput" accept=".pdf, .xlsx, .xls" onchange="handleFileUpload(event)">
     <textarea id="namesInput" rows="6" placeholder="Or enter names manually, separated by commas..."></textarea>
     <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
     <button class="btn btn-danger w-100 mt-2" onclick="resetApp()">Reset</button>
 
+    <div id="winnerDisplay"></div>
     <table id="winnerTable" class="table table-striped mt-4"></table>
-
-    <div class="btn-container">
-        <button class="btn btn-success" onclick="downloadPDF()">Download PDF</button>
-        <button class="btn btn-info" onclick="downloadExcel()">Download Excel</button>
-    </div>
 </div>
 
 <script>
     let names = [];
 
-    function handleFileUpload(event) {
+    async function handleFileUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = function (e) {
-            const workbook = XLSX.read(e.target.result, { type: 'binary' });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-            names = data.flat().filter(name => name);
-            document.getElementById('namesInput').value = names.join(', ');
-        };
-        reader.readAsBinaryString(file);
+
+        if (file.type === "application/pdf") {
+            reader.onload = async function (e) {
+                const pdfData = new Uint8Array(e.target.result);
+                const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+                let extractedText = "";
+
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    const textContent = await page.getTextContent();
+                    const textItems = textContent.items.map(item => item.str);
+                    extractedText += textItems.join(" ") + " ";
+                }
+
+                names = extractedText.split(/[,\n\s]+/).filter(name => name.trim());
+                document.getElementById('namesInput').value = names.join(", ");
+            };
+            reader.readAsArrayBuffer(file);
+
+        } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+            reader.onload = function (e) {
+                const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                names = data.flat().filter(name => name);
+                document.getElementById('namesInput').value = names.join(", ");
+            };
+            reader.readAsBinaryString(file);
+        }
     }
 
     async function startLuckyDraw() {
@@ -134,13 +152,19 @@
             row.insertCell(1).innerText = winners.join(', ');
 
             for (const winner of winners) {
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                confetti();
+                displayWinner(winner);
                 announceWinner(winner);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                confetti();
             }
 
             winnerIndex += count;
         }
+    }
+
+    function displayWinner(winner) {
+        const winnerDisplay = document.getElementById('winnerDisplay');
+        winnerDisplay.innerText = `Winner: ${winner}`;
     }
 
     function announceWinner(winner) {
@@ -151,23 +175,8 @@
 
     function resetApp() {
         document.getElementById('namesInput').value = '';
+        document.getElementById('winnerDisplay').innerText = '';
         document.getElementById('winnerTable').innerHTML = '';
-    }
-
-    function downloadPDF() {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text("Sri Hanumaan Trader's Lucky Draw - Winners", 20, 10);
-        doc.autoTable({ html: '#winnerTable' });
-        doc.save("Lucky_Draw_Winners.pdf");
-    }
-
-    function downloadExcel() {
-        const table = document.getElementById('winnerTable');
-        const ws = XLSX.utils.table_to_sheet(table);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Winners");
-        XLSX.writeFile(wb, "Lucky_Draw_Winners.xlsx");
     }
 </script>
 
