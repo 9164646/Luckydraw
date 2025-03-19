@@ -9,6 +9,7 @@ tu<!DOCTYPE html>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -57,6 +58,10 @@ tu<!DOCTYPE html>
 
     <hr>
 <h3>Upload Excel File</h3>
+    <input type="file" id="file-upload" />
+<button onclick="handleFileUpload()">Upload</button>
+<div id="result"></div>
+
 <input type="file" id="excelFile" accept=".xlsx, .xls" class="form-control mb-2">
 <button class="btn-custom" onclick="uploadExcel()">Upload Participants</button>
 <a href="#" onclick="downloadTemplate()" class="btn-custom">Download Template</a>
@@ -454,6 +459,53 @@ function deleteAllParticipants() {
         renderTable(); // Re-render the table (which will be empty now)
         alert("All participants have been deleted.");
     }
+}
+let existingData = [];  // Store the data that's already in the system
+
+// This function is called when the file is uploaded
+function handleFileUpload() {
+    const fileInput = document.getElementById('file-upload');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        alert("Please select a file!");
+        return;
+    }
+
+    // Read the file using SheetJS
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const data = e.target.result;
+        const workbook = XLSX.read(data, { type: 'binary' });
+
+        // Assuming data is in the first sheet
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+        // Check for duplicates and only add unique data
+        let newData = [];
+        jsonData.forEach(record => {
+            if (!isDuplicate(record)) {
+                newData.push(record);
+                existingData.push(record); // Add to existing data
+            }
+        });
+
+        // Display result
+        if (newData.length > 0) {
+            document.getElementById('result').innerText = "Successfully uploaded " + newData.length + " new records!";
+        } else {
+            document.getElementById('result').innerText = "No new records to upload. All records are duplicates.";
+        }
+    };
+
+    reader.readAsBinaryString(file);
+}
+
+// Check if the record already exists in the system
+function isDuplicate(record) {
+    // Example: Check if the 'email' field is already in existing data
+    return existingData.some(existingRecord => existingRecord.email === record.email);
 }
 
 </script>
