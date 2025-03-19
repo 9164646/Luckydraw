@@ -10,24 +10,20 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
     <style>
         body {
-            background: url('background.jpg') no-repeat center center fixed;
-            background-size: cover;
+            background: #000;
             color: #fff;
             text-align: center;
             font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
         }
         h1 {
             color: #FFD700;
-            margin-top: 20px;
-            font-size: 2.5rem;
+            margin: 20px 0;
         }
         #container {
             margin: 20px;
         }
         .winner {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: bold;
             color: #FFD700;
             animation: glow 1.5s infinite alternate;
@@ -36,13 +32,11 @@
             from { text-shadow: 0 0 10px #FFD700; }
             to { text-shadow: 0 0 20px #FFD700; }
         }
-        .hidden {
-            display: none;
-        }
         #countdown {
             font-size: 3rem;
             color: #FF6347;
         }
+        .hidden { display: none; }
         .btn-custom {
             margin: 10px;
             background: #FFD700;
@@ -52,18 +46,16 @@
             cursor: pointer;
             border-radius: 5px;
         }
-        #musicControl {
-            margin-top: 20px;
-        }
     </style>
 </head>
 <body>
 
 <div id="container">
-    <img src="logo.png" alt="Sri Hanumaan Trader's Logo" width="200">
     <h1>Sri Hanumaan Trader's Lucky Draw</h1>
-    <button class="btn-custom" onclick="startShow()">Start Show</button>
-    <button class="btn-custom" onclick="toggleFullscreen()">Full Screen</button>
+
+    <input type="file" id="fileInput" accept=".csv, .xlsx, .xls, .pdf" class="btn-custom">
+    <button class="btn-custom" onclick="addParticipant()">Add Participant</button>
+    <button class="btn-custom" onclick="startDraw()">Start Draw</button>
     <button class="btn-custom" onclick="exportWinnersPDF()">Export Winners (PDF)</button>
     <button class="btn-custom" onclick="exportWinnersExcel()">Export Winners (Excel)</button>
 
@@ -71,107 +63,68 @@
     <h2 id="prizeTitle" class="hidden"></h2>
     <div id="winnerName" class="winner hidden"></div>
 
-    <div id="musicControl">
-        <button class="btn-custom" onclick="toggleMusic()">Play/Pause Music</button>
-        <audio id="bgMusic" loop>
-            <source src="background-music.mp3" type="audio/mpeg">
-        </audio>
-    </div>
+    <table class="table table-dark mt-4">
+        <thead>
+            <tr>
+                <th>S. No</th>
+                <th>Name</th>
+                <th>Trader Address</th>
+            </tr>
+        </thead>
+        <tbody id="participantList"></tbody>
+    </table>
 </div>
 
 <script>
-    const winners = [
-        { prize: '1st Prize: 6 Gram Gold', names: ['Winner 1'] },
-        { prize: '2nd Prize: 4 Gram Gold', names: ['Winner 2', 'Winner 3'] },
-        { prize: '3rd Prize: 3 Gram Gold', names: ['Winner 4', 'Winner 5', 'Winner 6'] },
-        { prize: '4th Prize: 2 Gram Gold', names: ['Winner 7', 'Winner 8', 'Winner 9', 'Winner 10'] },
-        { prize: '5th Prize: 1 Gram Gold', names: ['Winner 11', 'Winner 12', 'Winner 13', 'Winner 14', 'Winner 15'] },
-        { prize: '6th Prize: 0.5 Silver', names: ['Winner 16', 'Winner 17', 'Winner 18', 'Winner 19', 'Winner 20', 'Winner 21'] }
-    ];
+    const participants = [];
+    const winners = [];
 
-    let currentPrize = 0;
-    let currentWinner = 0;
-
-    function startShow() {
-        document.querySelector('.btn-custom').style.display = 'none';
-        announcePrize();
-    }
-
-    function announcePrize() {
-        if (currentPrize < winners.length) {
-            const prize = winners[currentPrize];
-            document.getElementById('prizeTitle').innerText = prize.prize;
-            document.getElementById('prizeTitle').classList.remove('hidden');
-            currentWinner = 0;
-            showCountdown(() => announceWinner(prize));
-        } else {
-            showThankYou();
+    function addParticipant() {
+        const name = prompt("Enter Participant's Name:");
+        const address = prompt("Enter Trader's Address:");
+        if (name && address) {
+            participants.push({ sno: participants.length + 1, name, address });
+            updateParticipantList();
         }
     }
 
-    function showCountdown(callback) {
-        let countdown = 5;
-        const countdownEl = document.getElementById('countdown');
-        countdownEl.classList.remove('hidden');
-        const interval = setInterval(() => {
-            countdownEl.innerText = countdown;
-            countdown--;
-            if (countdown < 0) {
-                clearInterval(interval);
-                countdownEl.classList.add('hidden');
-                callback();
-            }
-        }, 1000);
+    function updateParticipantList() {
+        const list = document.getElementById('participantList');
+        list.innerHTML = "";
+        participants.forEach(p => {
+            list.innerHTML += `<tr><td>${p.sno}</td><td>${p.name}</td><td>${p.address}</td></tr>`;
+        });
     }
 
-    function announceWinner(prize) {
-        if (currentWinner < prize.names.length) {
-            const winnerName = document.getElementById('winnerName');
-            winnerName.innerText = prize.names[currentWinner];
-            winnerName.classList.remove('hidden');
-            currentWinner++;
-            setTimeout(() => announceWinner(prize), 5000);
-        } else {
-            currentPrize++;
-            setTimeout(announcePrize, 3000);
+    function startDraw() {
+        if (participants.length === 0) {
+            alert("No participants added!");
+            return;
         }
+        drawWinner();
     }
 
-    function showThankYou() {
-        document.getElementById('prizeTitle').innerText = 'Thank You for Participating!';
-        document.getElementById('winnerName').classList.add('hidden');
-    }
+    function drawWinner() {
+        const winnerIndex = Math.floor(Math.random() * participants.length);
+        const winner = participants[winnerIndex];
+        winners.push(winner);
 
-    function toggleFullscreen() {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen();
-        } else if (document.exitFullscreen) {
-            document.exitFullscreen();
-        }
-    }
-
-    function toggleMusic() {
-        const bgMusic = document.getElementById('bgMusic');
-        if (bgMusic.paused) {
-            bgMusic.play();
-        } else {
-            bgMusic.pause();
-        }
+        document.getElementById('prizeTitle').innerText = `Winner: ${winner.name}`;
+        document.getElementById('prizeTitle').classList.remove('hidden');
     }
 
     function exportWinnersPDF() {
         const docDefinition = { content: ['Sri Hanumaan Trader\'s Lucky Draw Winners\n\n'] };
-        winners.forEach(prize => {
-            docDefinition.content.push(prize.prize);
-            docDefinition.content.push(prize.names.join(', ') + '\n\n');
+        winners.forEach(winner => {
+            docDefinition.content.push(`${winner.sno}. ${winner.name} - ${winner.address}\n`);
         });
         pdfMake.createPdf(docDefinition).download('winners.pdf');
     }
 
     function exportWinnersExcel() {
-        let csvContent = "data:text/csv;charset=utf-8,";
-        winners.forEach(prize => {
-            csvContent += `${prize.prize}\n${prize.names.join(', ')}\n\n`;
+        let csvContent = "data:text/csv;charset=utf-8,S. No,Name,Trader Address\n";
+        winners.forEach(winner => {
+            csvContent += `${winner.sno},${winner.name},${winner.address}\n`;
         });
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
