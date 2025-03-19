@@ -79,6 +79,45 @@
 <div id="winnerList" class="hidden"></div>
 
 <script>
+    // Add/Update Participant with Input Reset and Auto-Hide
+function addParticipant() {
+    const name = document.getElementById('participantName').value.trim();
+    const traderAddress = document.getElementById('traderAddress').value.trim();
+    
+    if (name && traderAddress) {
+        if (editIndex === -1) {
+            participants.push({ name, traderAddress });
+        } else {
+            participants[editIndex] = { name, traderAddress };
+            editIndex = -1;
+        }
+        localStorage.setItem('participants', JSON.stringify(participants));
+        renderTable();
+        // Clear inputs and auto-hide admin panel after adding/updating
+        document.getElementById('participantName').value = '';
+        document.getElementById('traderAddress').value = '';
+        toggleAdminPanel();
+    } else {
+        alert("Please enter both Name and Trader Address.");
+    }
+}
+
+// Edit Participant
+function editParticipant(index) {
+    document.getElementById('participantName').value = participants[index].name;
+    document.getElementById('traderAddress').value = participants[index].traderAddress;
+    editIndex = index;
+}
+
+// Delete Participant
+function deleteParticipant(index) {
+    if (confirm("Are you sure you want to delete this participant?")) {
+        participants.splice(index, 1);
+        localStorage.setItem('participants', JSON.stringify(participants));
+        renderTable();
+    }
+}
+
     let participants = JSON.parse(localStorage.getItem('participants')) || [];
     let winners = JSON.parse(localStorage.getItem('winners')) || [];
     let editIndex = -1;
