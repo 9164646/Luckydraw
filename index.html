@@ -4,15 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Lucky Draw App with PDF/Excel Import</title>
+    <title>Lucky Draw - Sri Hanumar Trader's</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.9.359/build/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.3.5"></script>
     <style>
+        /* Background */
         body {
             font-family: Arial, sans-serif;
-            background: #f0f8ff;
+            background: url('https://via.placeholder.com/1920x1080') no-repeat center center fixed;
+            background-size: cover;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -20,29 +22,30 @@
             align-items: center;
             min-height: 100vh;
         }
+        /* Container */
         .lucky-draw-container {
-            background: #ffffff;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             border-radius: 15px;
             padding: 30px;
             max-width: 500px;
             width: 100%;
             text-align: center;
-            animation: fadeIn 0.5s ease-out;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* Logo */
+        .company-logo {
+            width: 100px;
+            height: 100px;
+            object-fit: contain;
+            margin-bottom: 10px;
         }
+        /* Header */
         h1 {
             color: #007bff;
             margin-bottom: 20px;
-            animation: glow 1.5s infinite alternate;
+            text-shadow: 0 0 10px #007bff;
         }
-        @keyframes glow {
-            from { text-shadow: 0 0 10px #007bff; }
-            to { text-shadow: 0 0 20px #0056b3; }
-        }
+        /* Drop Zone */
         .drop-zone {
             border: 2px dashed #007bff;
             padding: 20px;
@@ -55,9 +58,7 @@
         .drop-zone.dragover {
             background: #d0e9ff;
         }
-        .btn-primary, .btn-secondary {
-            margin-bottom: 10px;
-        }
+        /* Winner Popup */
         .winner-popup {
             margin-top: 20px;
             padding: 15px;
@@ -65,22 +66,29 @@
             background: #28a745;
             color: #fff;
             font-weight: bold;
-            animation: popUp 0.5s ease-out;
-        }
-        @keyframes popUp {
-            from { transform: scale(0.8); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
         }
     </style>
 </head>
 <body>
 <div class="lucky-draw-container">
-    <h1>Lucky Draw</h1>
+    <!-- Logo -->
+    <img src="https://via.placeholder.com/100" alt="Sri Hanumar Trader's Logo" class="company-logo">
+    
+    <!-- Company Name -->
+    <h1>Sri Hanumaan Trader's</h1>
+    
+    <!-- File Upload -->
     <div class="drop-zone" id="dropZone">Drag and Drop PDF/Excel here or Click to Upload</div>
     <input type="file" id="fileInput" accept=".pdf, .xlsx" hidden>
+    
+    <!-- Manual Names Input -->
     <textarea id="namesInput" class="form-control mb-3" placeholder="Or Enter Names, separated by commas" rows="4"></textarea>
+    
+    <!-- Buttons -->
     <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
-    <button class="btn btn-secondary w-100" onclick="restartApp()">Restart Test</button>
+    <button class="btn btn-secondary w-100 mt-2" onclick="restartApp()">Restart Test</button>
+    
+    <!-- Result -->
     <div id="result"></div>
 </div>
 
@@ -89,6 +97,7 @@
     const fileInput = document.getElementById('fileInput');
     const namesInput = document.getElementById('namesInput');
 
+    // Drag-and-Drop Support
     dropZone.addEventListener('click', () => fileInput.click());
     dropZone.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -102,6 +111,7 @@
     });
     fileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
 
+    // File Upload
     async function handleFileUpload(file) {
         if (!file) return;
         if (file.name.endsWith('.pdf')) {
@@ -113,6 +123,7 @@
         }
     }
 
+    // Extract Names from PDF
     async function extractPDFNames(file) {
         const reader = new FileReader();
         reader.onload = async function (e) {
@@ -129,6 +140,7 @@
         reader.readAsArrayBuffer(file);
     }
 
+    // Extract Names from Excel
     function extractExcelNames(file) {
         const reader = new FileReader();
         reader.onload = function (e) {
@@ -140,6 +152,7 @@
         reader.readAsBinaryString(file);
     }
 
+    // Lucky Draw Logic
     function startLuckyDraw() {
         const names = namesInput.value.split(',').map(name => name.trim()).filter(name => name !== "");
         if (names.length === 0) {
@@ -152,11 +165,13 @@
         launchConfetti();
     }
 
+    // Restart App
     function restartApp() {
         namesInput.value = '';
         document.getElementById('result').innerHTML = '';
     }
 
+    // Confetti Celebration
     function launchConfetti() {
         confetti({
             particleCount: 200,
