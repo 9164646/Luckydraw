@@ -22,44 +22,8 @@
 
 <h1>Sri Hanumaan Trader's Lucky Draw</h1>
 <button class="btn-custom" onclick="toggleAdminPanel()">Admin Panel</button>
-<button class="btn-custom" onclick="startDraw()">Start Lucky Draw</button>
-<button class="btn-custom" onclick="exportWinnersPDF()">Download PDF</button>
-<button class="btn-custom" onclick="exportWinnersExcel()">Download Excel</button>
-
-<!-- Admin Panel -->
-<div id="adminPanel" class="hidden">
-    <h2>Manage Participants</h2>
-    <input type="text" id="participantName" placeholder="Enter Name" class="form-control mb-2">
-    <input type="text" id="traderAddress" placeholder="Enter Trader Address" class="form-control mb-2">
-    <button class="btn-custom" onclick="addParticipant()">Add/Update</button>
-
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Sri Hanumaan Trader's Lucky Draw</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
-    <style>
-        body { background: #000; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-        h1 { color: #FFD700; margin-bottom: 20px; }
-        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
-        table { width: 100%; background: #fff; color: #000; margin-top: 20px; border-radius: 5px; }
-        th, td { padding: 10px; border: 1px solid #ddd; }
-        #winnerList { margin-top: 20px; }
-        .hidden { display: none; }
-    </style>
-</head>
-<body>
-
-<h1>Sri Hanumaan Trader's Lucky Draw</h1>
-<button class="btn-custom" onclick="toggleAdminPanel()">Admin Panel</button>
 <button id="startDrawBtn" class="btn-custom" onclick="startDraw()">Start Lucky Draw</button>
 <button class="btn-custom" onclick="exportWinnersPDF()">Download PDF</button>
-<button class="btn-custom" onclick="exportWinnersExcel()">Download Excel</button>
 <button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
 
 <!-- Admin Panel -->
@@ -79,45 +43,6 @@
 <div id="winnerList" class="hidden"></div>
 
 <script>
-    // Add/Update Participant with Input Reset and Auto-Hide
-function addParticipant() {
-    const name = document.getElementById('participantName').value.trim();
-    const traderAddress = document.getElementById('traderAddress').value.trim();
-    
-    if (name && traderAddress) {
-        if (editIndex === -1) {
-            participants.push({ name, traderAddress });
-        } else {
-            participants[editIndex] = { name, traderAddress };
-            editIndex = -1;
-        }
-        localStorage.setItem('participants', JSON.stringify(participants));
-        renderTable();
-        // Clear inputs and auto-hide admin panel after adding/updating
-        document.getElementById('participantName').value = '';
-        document.getElementById('traderAddress').value = '';
-        toggleAdminPanel();
-    } else {
-        alert("Please enter both Name and Trader Address.");
-    }
-}
-
-// Edit Participant
-function editParticipant(index) {
-    document.getElementById('participantName').value = participants[index].name;
-    document.getElementById('traderAddress').value = participants[index].traderAddress;
-    editIndex = index;
-}
-
-// Delete Participant
-function deleteParticipant(index) {
-    if (confirm("Are you sure you want to delete this participant?")) {
-        participants.splice(index, 1);
-        localStorage.setItem('participants', JSON.stringify(participants));
-        renderTable();
-    }
-}
-
     let participants = JSON.parse(localStorage.getItem('participants')) || [];
     let winners = JSON.parse(localStorage.getItem('winners')) || [];
     let editIndex = -1;
@@ -135,7 +60,6 @@ function deleteParticipant(index) {
     // Toggle Admin Panel
     function toggleAdminPanel() {
         document.getElementById('adminPanel').classList.toggle('hidden');
-        document.getElementById('winnerList').classList.add('hidden');
         renderTable();
     }
 
@@ -174,14 +98,8 @@ function deleteParticipant(index) {
         });
     }
 
-    // Start Draw with Validation
+    // Start Draw
     function startDraw() {
-        const totalWinnersNeeded = prizes.reduce((acc, prize) => acc + prize.count, 0);
-        if (participants.length < totalWinnersNeeded) {
-            alert("Not enough participants to conduct the draw!");
-            return;
-        }
-
         if (winners.length > 0) {
             alert("Lucky Draw already completed!");
             return;
@@ -205,13 +123,22 @@ function deleteParticipant(index) {
         const winnerList = document.getElementById('winnerList');
         winnerList.classList.remove('hidden');
         let html = "<h2>Winners List</h2>";
-        prizes.forEach(prize => {
-            const prizeWinners = winners.filter(w => w.prize === prize.prize);
-            html += `<h3>${prize.prize}</h3><table class="table"><tr><th>Name</th><th>Trader Address</th><th>Gift</th></tr>`;
-            prizeWinners.forEach(w => html += `<tr><td>${w.name}</td><td>${w.traderAddress}</td><td>${w.gift}</td></tr>`);
-            html += "</table>";
+        winners.forEach(w => {
+            html += `<p>${w.name} - ${w.prize} (${w.gift})</p>`;
         });
         winnerList.innerHTML = html;
+    }
+
+    // Export Winners as PDF
+    function exportWinnersPDF() {
+        const docDefinition = {
+            content: [
+                { text: 'Sri Hanumaan Trader\'s Lucky Draw Winners', style: 'header' },
+                ...winners.map(w => `${w.name} - ${w.prize} (${w.gift})`)
+            ],
+            styles: { header: { fontSize: 18, bold: true, margin: [0, 0, 0, 10] } }
+        };
+        pdfMake.createPdf(docDefinition).download('Winners_List.pdf');
     }
 
     // Reset Winners
