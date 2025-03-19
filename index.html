@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+tu<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -345,7 +345,45 @@ document.getElementById('drumroll').play();
 // Play sound when winners are revealed
 document.getElementById('chime').play();
 
+   // Start the Lucky Draw
+function startDraw() {
+    if (participants.length === 0) {
+        alert("No participants available for the draw!");
+        return;
+    }
     
+    // Play drumroll sound when the draw starts
+    document.getElementById('drumroll').play();
+
+    prizes.forEach(prize => {
+        const eligible = participants.filter(p => !winners.find(w => w.name === p.name));
+        for (let i = 0; i < prize.count; i++) {
+            const randomIndex = Math.floor(Math.random() * eligible.length);
+            winners.push({ ...eligible.splice(randomIndex, 1)[0], prize: prize.prize, gift: prize.gift });
+        }
+    });
+
+    localStorage.setItem('winners', JSON.stringify(winners));
+    document.getElementById('startDrawBtn').disabled = true;
+    showWinners();
+    // Call confetti effect after showing winners
+    confetti();
+    // Play chime sound when winners are revealed
+    document.getElementById('chime').play();
+}
+
+// Confetti effect
+function confetti() {
+    for (let i = 0; i < 100; i++) {
+        const confetti = document.createElement("div");
+        confetti.className = "confetti";
+        confetti.style.left = Math.random() * 100 + "vw";
+        confetti.style.animationDuration = Math.random() * 2 + 2 + "s";
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 3000);
+    }
+}
+ 
     
 </script>
 
