@@ -33,6 +33,13 @@
     <input type="text" id="traderAddress" placeholder="Enter Trader Address" class="form-control mb-2">
     <button class="btn-custom" onclick="addParticipant()">Add/Update</button>
 
+    <hr>
+<h3>Upload Excel File</h3>
+<input type="file" id="excelFile" accept=".xlsx, .xls" class="form-control mb-2">
+<button class="btn-custom" onclick="uploadExcel()">Upload Participants</button>
+<a href="#" onclick="downloadTemplate()" class="btn-custom">Download Template</a>
+
+    
     <table id="participantTable" class="table table-bordered mt-3">
         <thead><tr><th>S. No</th><th>Name</th><th>Trader Address</th><th>Actions</th></tr></thead>
         <tbody></tbody>
@@ -87,6 +94,74 @@
             alert("Please enter both Name and Trader Address.");
         }
     }
+
+    // Upload from Excel File
+function uploadExcel() {
+    const fileInput = document.getElementById('excelFile');
+    if (!fileInput.files.length) return alert("Please select an Excel file.");
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const workbook = XLSX.read(e.target.result, { type: 'binary' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(sheet);
+
+        data.forEach(row => {
+            if (row.Name && row['Trader Address']) {
+                if (!participants.some(p => p.name.toLowerCase() === row.Name.toLowerCase())) {
+                    participants.push({ name: row.Name, traderAddress: row['Trader Address'] });
+                }
+            }
+        });
+
+        localStorage.setItem('participants', JSON.stringify(participants));
+        alert("Participants uploaded successfully!");
+        renderTable();
+    };
+    reader.readAsBinaryString(fileInput.files[0]);
+}
+
+// Download Excel Template
+function downloadTemplate() {
+    const ws = XLSX.utils.json_to_sheet([{ Name: '', 'Trader Address': '' }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, 'LuckyDraw_Template.xlsx');
+}
+// Upload from Excel File
+function uploadExcel() {
+    const fileInput = document.getElementById('excelFile');
+    if (!fileInput.files.length) return alert("Please select an Excel file.");
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        const workbook = XLSX.read(e.target.result, { type: 'binary' });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = XLSX.utils.sheet_to_json(sheet);
+
+        data.forEach(row => {
+            if (row.Name && row['Trader Address']) {
+                if (!participants.some(p => p.name.toLowerCase() === row.Name.toLowerCase())) {
+                    participants.push({ name: row.Name, traderAddress: row['Trader Address'] });
+                }
+            }
+        });
+
+        localStorage.setItem('participants', JSON.stringify(participants));
+        alert("Participants uploaded successfully!");
+        renderTable();
+    };
+    reader.readAsBinaryString(fileInput.files[0]);
+}
+
+// Download Excel Template
+function downloadTemplate() {
+    const ws = XLSX.utils.json_to_sheet([{ Name: '', 'Trader Address': '' }]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, 'LuckyDraw_Template.xlsx');
+}
+
 
     // Render Participant Table
     function renderTable() {
