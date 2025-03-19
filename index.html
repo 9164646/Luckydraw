@@ -6,7 +6,9 @@
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Sri Hanumaan Trader's Lucky Draw</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -24,24 +26,20 @@
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             border-radius: 15px;
             padding: 30px;
-            max-width: 800px;
+            max-width: 900px;
             width: 100%;
             text-align: center;
         }
         h1 {
             color: #007bff;
             text-shadow: 0 0 10px #007bff;
-            margin-bottom: 20px;
         }
-        textarea {
+        textarea, input[type="file"] {
             width: 100%;
             margin-bottom: 20px;
             padding: 10px;
             border: 1px solid #007bff;
             border-radius: 5px;
-        }
-        button {
-            margin: 10px 0;
         }
         #countdown {
             font-size: 3rem;
@@ -63,60 +61,51 @@
             background: #007bff;
             color: #fff;
         }
+        .btn-container {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-around;
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>Sri Hanumaan Trader's Lucky Draw</h1>
-    
-    <textarea id="namesInput" rows="6" placeholder="Enter names, separated by commas..."></textarea>
-    <button class="btn btn-primary w-100" onclick="startCountdown()">Start Draw</button>
-    <button class="btn btn-danger w-100" onclick="resetApp()">Reset</button>
 
-    <div id="countdown">3</div>
+    <input type="file" id="fileInput" accept=".xlsx, .xls" onchange="handleFileUpload(event)">
+    <textarea id="namesInput" rows="6" placeholder="Or enter names manually, separated by commas..."></textarea>
+    <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
+    <button class="btn btn-danger w-100 mt-2" onclick="resetApp()">Reset</button>
+
     <table id="winnerTable" class="table table-striped mt-4"></table>
+
+    <div class="btn-container">
+        <button class="btn btn-success" onclick="downloadPDF()">Download PDF</button>
+        <button class="btn btn-info" onclick="downloadExcel()">Download Excel</button>
+    </div>
 </div>
 
 <script>
-    const goldRate = 6500;  // ₹ per gram
-    const silverRate = 80;  // ₹ per gram
-
-    const prizes = [
-        { title: '1st Prize - 6 Gram Gold', grams: 6, type: 'gold', count: 1 },
-        { title: '2nd Prize - 4 Gram Gold', grams: 4, type: 'gold', count: 2 },
-        { title: '3rd Prize - 3 Gram Gold', grams: 3, type: 'gold', count: 3 },
-        { title: '4th Prize - 2 Gram Gold', grams: 2, type: 'gold', count: 4 },
-        { title: '5th Prize - 1 Gram Gold', grams: 1, type: 'gold', count: 5 },
-        { title: '6th Prize - 0.5 Gram Silver', grams: 0.5, type: 'silver', count: 6 }
-    ];
-
     let names = [];
 
-    function startCountdown() {
-        const countdown = document.getElementById('countdown');
-        countdown.style.display = 'block';
-        let count = 3;
-        countdown.innerText = count;
-        
-        const interval = setInterval(() => {
-            count--;
-            countdown.innerText = count;
-            if (count === 0) {
-                clearInterval(interval);
-                countdown.style.display = 'none';
-                startLuckyDraw();
-            }
-        }, 1000);
+    function handleFileUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const workbook = XLSX.read(e.target.result, { type: 'binary' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            names = data.flat().filter(name => name);
+            document.getElementById('namesInput').value = names.join(', ');
+        };
+        reader.readAsBinaryString(file);
     }
 
-    function startLuckyDraw() {
+    async function startLuckyDraw() {
         const namesInput = document.getElementById('namesInput').value;
-        if (!namesInput) {
-            alert("Please enter names!");
-            return;
-        }
-        
         names = namesInput.split(',').map(name => name.trim()).filter(name => name !== "");
         if (names.length < 21) {
             alert("You need at least 21 names to run this lucky draw!");
@@ -125,31 +114,39 @@
         
         names = names.sort(() => Math.random() - 0.5);
 
+        const prizes = [
+            { prize: "1st Prize - 6 Gram Gold", count: 1 },
+            { prize: "2nd Prize - 4 Gram Gold", count: 2 },
+            { prize: "3rd Prize - 3 Gram Gold", count: 3 },
+            { prize: "4th Prize - 2 Gram Gold", count: 4 },
+            { prize: "5th Prize - 1 Gram Gold", count: 5 },
+            { prize: "6th Prize - 0.5 Gram Silver", count: 6 }
+        ];
+
         const table = document.getElementById('winnerTable');
-        table.innerHTML = '<thead><tr><th>Prize</th><th>Winners</th><th>Value (INR)</th></tr></thead><tbody></tbody>';
-        
-        announceWinners(0, 0);
+        table.innerHTML = '<thead><tr><th>Prize</th><th>Winners</th></tr></thead><tbody></tbody>';
+
+        let winnerIndex = 0;
+        for (const { prize, count } of prizes) {
+            const winners = names.slice(winnerIndex, winnerIndex + count);
+            const row = table.insertRow();
+            row.insertCell(0).innerText = prize;
+            row.insertCell(1).innerText = winners.join(', ');
+
+            for (const winner of winners) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                confetti();
+                announceWinner(winner);
+            }
+
+            winnerIndex += count;
+        }
     }
 
-    function announceWinners(prizeIndex, currentIndex) {
-        if (prizeIndex >= prizes.length) return;
-        
-        const prize = prizes[prizeIndex];
-        const winners = names.slice(currentIndex, currentIndex + prize.count);
-        currentIndex += prize.count;
-
-        const value = prize.type === 'gold' ? prize.grams * goldRate : prize.grams * silverRate;
-        const formattedValue = new Intl.NumberFormat('en-IN').format(value);
-
-        const row = document.getElementById('winnerTable').insertRow();
-        row.insertCell(0).innerText = prize.title;
-        row.insertCell(1).innerText = winners.join(', ');
-        row.insertCell(2).innerText = `₹${formattedValue}`;
-
-        launchConfetti();
-        alert(`🏆 ${prize.title}\nWinner(s): ${winners.join(', ')}\nValue: ₹${formattedValue}`);
-        
-        setTimeout(() => announceWinners(prizeIndex + 1, currentIndex), 5000);
+    function announceWinner(winner) {
+        const speech = new SpeechSynthesisUtterance(`Congratulations ${winner}!`);
+        speech.lang = 'en-IN';
+        speechSynthesis.speak(speech);
     }
 
     function resetApp() {
@@ -157,12 +154,20 @@
         document.getElementById('winnerTable').innerHTML = '';
     }
 
-    function launchConfetti() {
-        confetti({
-            particleCount: 200,
-            spread: 70,
-            origin: { y: 0.6 }
-        });
+    function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("Sri Hanumaan Trader's Lucky Draw - Winners", 20, 10);
+        doc.autoTable({ html: '#winnerTable' });
+        doc.save("Lucky_Draw_Winners.pdf");
+    }
+
+    function downloadExcel() {
+        const table = document.getElementById('winnerTable');
+        const ws = XLSX.utils.table_to_sheet(table);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Winners");
+        XLSX.writeFile(wb, "Lucky_Draw_Winners.xlsx");
     }
 </script>
 
