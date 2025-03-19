@@ -125,16 +125,43 @@
         showWinners();
     }
 
-    // Show Winners
-    function showWinners() {
-        const winnerList = document.getElementById('winnerList');
-        winnerList.classList.remove('hidden');
-        let html = "<h2>Winners List</h2>";
-        winners.forEach(w => {
-            html += `<p>${w.name} - ${w.prize} (${w.gift})</p>`;
-        });
-        winnerList.innerHTML = html;
-    }
+ // Show Winners with improved layout
+function showWinners() {
+    const winnerList = document.getElementById('winnerList');
+    winnerList.classList.remove('hidden');
+
+    let html = `
+        <h2 style="color: #FFD700; margin-bottom: 20px;">Winners List</h2>
+        <table style="width: 100%; border-collapse: collapse; background: #fff; color: #000; border-radius: 5px; overflow: hidden;">
+            <thead style="background: #FFD700; color: #000;">
+                <tr>
+                    <th style="padding: 10px; border: 1px solid #ddd;">S. No</th>
+                    <th style="padding: 10px; border: 1px solid #ddd;">Name</th>
+                    <th style="padding: 10px; border: 1px solid #ddd;">Trader Address</th>
+                    <th style="padding: 10px; border: 1px solid #ddd;">Prize</th>
+                    <th style="padding: 10px; border: 1px solid #ddd;">Gift</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+    winners.forEach((w, index) => {
+        html += `
+            <tr>
+                <td style="padding: 10px; border: 1px solid #ddd;">${index + 1}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">${w.name}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">${w.traderAddress}</td>
+                <td style="padding: 10px; border: 1px solid #ddd; color: #FFD700;">${w.prize}</td>
+                <td style="padding: 10px; border: 1px solid #ddd;">${w.gift}</td>
+            </tr>`;
+    });
+
+    html += `
+            </tbody>
+        </table>`;
+
+    winnerList.innerHTML = html;
+}
+
 
     // Export Winners as PDF
     function exportWinnersPDF() {
