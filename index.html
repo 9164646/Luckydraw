@@ -4,13 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Lucky Draw - Sri Hanumar Trader's</title>
+    <title>Lucky Draw - Sri Hanumaan Trader's</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.9.359/build/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.3.5"></script>
     <style>
-        /* Background */
+        /* General */
         body {
             font-family: Arial, sans-serif;
             background: url('https://via.placeholder.com/1920x1080') no-repeat center center fixed;
@@ -22,8 +21,7 @@
             align-items: center;
             min-height: 100vh;
         }
-        /* Container */
-        .lucky-draw-container {
+        .container {
             background: rgba(255, 255, 255, 0.9);
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
             border-radius: 15px;
@@ -31,19 +29,17 @@
             max-width: 500px;
             width: 100%;
             text-align: center;
+            animation: fadeIn 1s ease-in-out;
         }
-        /* Logo */
-        .company-logo {
-            width: 100px;
-            height: 100px;
-            object-fit: contain;
-            margin-bottom: 10px;
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         /* Header */
         h1 {
             color: #007bff;
-            margin-bottom: 20px;
             text-shadow: 0 0 10px #007bff;
+            margin-bottom: 20px;
         }
         /* Drop Zone */
         .drop-zone {
@@ -55,39 +51,41 @@
             background: #e9f5ff;
             border-radius: 8px;
         }
-        .drop-zone.dragover {
-            background: #d0e9ff;
-        }
         /* Winner Popup */
-        .winner-popup {
+        .winner {
             margin-top: 20px;
             padding: 15px;
             border-radius: 8px;
             background: #28a745;
             color: #fff;
             font-weight: bold;
+            animation: popIn 0.5s ease-in-out;
+        }
+        @keyframes popIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
         }
     </style>
 </head>
 <body>
-<div class="lucky-draw-container">
-    <!-- Logo -->
-    <img src="https://via.placeholder.com/100" alt="Sri Hanumar Trader's Logo" class="company-logo">
-    
-    <!-- Company Name -->
+<div class="container">
     <h1>Sri Hanumaan Trader's</h1>
-    
+
     <!-- File Upload -->
-    <div class="drop-zone" id="dropZone">Drag and Drop PDF/Excel here or Click to Upload</div>
+    <div class="drop-zone" id="dropZone">Drag & Drop PDF/Excel or Click to Upload</div>
     <input type="file" id="fileInput" accept=".pdf, .xlsx" hidden>
-    
+
     <!-- Manual Names Input -->
     <textarea id="namesInput" class="form-control mb-3" placeholder="Or Enter Names, separated by commas" rows="4"></textarea>
-    
+
+    <!-- Number of Winners -->
+    <input type="number" id="winnerCount" class="form-control mb-3" placeholder="Number of Winners" min="1">
+
     <!-- Buttons -->
     <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
-    <button class="btn btn-secondary w-100 mt-2" onclick="restartApp()">Restart Test</button>
-    
+    <button class="btn btn-secondary w-100 mt-2" onclick="exportWinners()">Export Winners</button>
+    <button class="btn btn-danger w-100 mt-2" onclick="restartApp()">Restart Test</button>
+
     <!-- Result -->
     <div id="result"></div>
 </div>
@@ -96,58 +94,26 @@
     const dropZone = document.getElementById('dropZone');
     const fileInput = document.getElementById('fileInput');
     const namesInput = document.getElementById('namesInput');
+    const result = document.getElementById('result');
+    let winners = [];
 
     // Drag-and-Drop Support
     dropZone.addEventListener('click', () => fileInput.click());
-    dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('dragover');
-    });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('dragover', (e) => e.preventDefault());
     dropZone.addEventListener('drop', (e) => {
         e.preventDefault();
-        dropZone.classList.remove('dragover');
         handleFileUpload(e.dataTransfer.files[0]);
     });
     fileInput.addEventListener('change', (e) => handleFileUpload(e.target.files[0]));
 
     // File Upload
-    async function handleFileUpload(file) {
-        if (!file) return;
-        if (file.name.endsWith('.pdf')) {
-            await extractPDFNames(file);
-        } else if (file.name.endsWith('.xlsx')) {
-            extractExcelNames(file);
-        } else {
-            alert('Please upload a PDF or Excel file!');
-        }
-    }
-
-    // Extract Names from PDF
-    async function extractPDFNames(file) {
-        const reader = new FileReader();
-        reader.onload = async function (e) {
-            const typedArray = new Uint8Array(e.target.result);
-            const pdf = await pdfjsLib.getDocument(typedArray).promise;
-            let extractedText = '';
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                textContent.items.forEach(item => extractedText += item.str + '\n');
-            }
-            namesInput.value = extractedText;
-        };
-        reader.readAsArrayBuffer(file);
-    }
-
-    // Extract Names from Excel
-    function extractExcelNames(file) {
+    function handleFileUpload(file) {
         const reader = new FileReader();
         reader.onload = function (e) {
             const workbook = XLSX.read(e.target.result, { type: 'binary' });
             const sheetName = workbook.SheetNames[0];
-            const sheet = XLSX.utils.sheet_to_text(workbook.Sheets[sheetName]);
-            namesInput.value = sheet;
+            const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { header: 1 });
+            namesInput.value = sheet.flat().join(', ');
         };
         reader.readAsBinaryString(file);
     }
@@ -155,20 +121,62 @@
     // Lucky Draw Logic
     function startLuckyDraw() {
         const names = namesInput.value.split(',').map(name => name.trim()).filter(name => name !== "");
+        const winnerCount = parseInt(document.getElementById('winnerCount').value) || 1;
+        
         if (names.length === 0) {
             alert("Please enter at least one name!");
             return;
         }
-        const winner = names[Math.floor(Math.random() * names.length)];
-        const result = document.getElementById('result');
-        result.innerHTML = `<div class="winner-popup">🎉 Winner: ${winner}</div>`;
+        
+        if (winnerCount > names.length) {
+            alert("Winner count cannot exceed total names!");
+            return;
+        }
+        
+        // Countdown
+        result.innerHTML = "<h2>Get Ready...</h2>";
+        let countdown = 3;
+        const countdownInterval = setInterval(() => {
+            result.innerHTML = `<h2>${countdown}</h2>`;
+            countdown--;
+            if (countdown < 0) {
+                clearInterval(countdownInterval);
+                drawWinners(names, winnerCount);
+            }
+        }, 1000);
+    }
+
+    // Draw Winners
+    function drawWinners(names, winnerCount) {
+        winners = [];
+        while (winners.length < winnerCount) {
+            const randomIndex = Math.floor(Math.random() * names.length);
+            const winner = names[randomIndex];
+            if (!winners.includes(winner)) winners.push(winner);
+        }
+
+        result.innerHTML = winners.map(w => `<div class="winner">🎉 Winner: ${w}</div>`).join('');
         launchConfetti();
     }
 
     // Restart App
     function restartApp() {
         namesInput.value = '';
-        document.getElementById('result').innerHTML = '';
+        document.getElementById('winnerCount').value = '';
+        result.innerHTML = '';
+        winners = [];
+    }
+
+    // Export Winners
+    function exportWinners() {
+        if (winners.length === 0) {
+            alert("No winners to export!");
+            return;
+        }
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.aoa_to_sheet([["Winners"], ...winners.map(w => [w])]);
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Winners");
+        XLSX.writeFile(workbook, "winners.xlsx");
     }
 
     // Confetti Celebration
