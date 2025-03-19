@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     <style>
-        /* General */
         body {
             font-family: Arial, sans-serif;
             background: url('https://via.placeholder.com/1920x1080') no-repeat center center fixed;
@@ -52,11 +52,15 @@
         .prize {
             margin-bottom: 15px;
             padding: 10px;
-            background: #007bff;
             color: #fff;
             border-radius: 5px;
             animation: fadeIn 0.8s ease;
         }
+        .prize:nth-child(1) { background: gold; }
+        .prize:nth-child(2) { background: #c0c0c0; }
+        .prize:nth-child(3) { background: #cd7f32; }
+        .prize:nth-child(4), .prize:nth-child(5), .prize:nth-child(6) { background: #007bff; }
+
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -72,6 +76,7 @@
     <textarea id="namesInput" rows="6" placeholder="Enter names, separated by commas..."></textarea>
     <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
     <button class="btn btn-success w-100" onclick="exportToPDF()">Export to PDF</button>
+    <button class="btn btn-warning w-100" onclick="exportToExcel()">Export to Excel</button>
     <button class="btn btn-danger w-100" onclick="resetApp()">Reset</button>
     
     <!-- Results Section -->
@@ -79,7 +84,15 @@
 </div>
 
 <script>
-    const prizeDistribution = [1, 2, 3, 4, 5, 6];
+    const prizes = [
+        { title: '1st Prize - 6 Gram Gold', count: 1 },
+        { title: '2nd Prize - 4 Gram Gold', count: 2 },
+        { title: '3rd Prize - 3 Gram Gold', count: 3 },
+        { title: '4th Prize - 2 Gram Gold', count: 4 },
+        { title: '5th Prize - 1 Gram Gold', count: 5 },
+        { title: '6th Prize - 0.5 Gram Silver', count: 6 }
+    ];
+
     let winnersList = '';
 
     function startLuckyDraw() {
@@ -103,17 +116,16 @@
         winnersList = 'Sri Hanumaan Trader\'s Lucky Draw Winners\n\n';
 
         let currentIndex = 0;
-        prizeDistribution.forEach((prize, index) => {
-            const prizeLevel = `${index + 1} Prize - ${prize} Winner${prize > 1 ? 's' : ''}`;
-            const winners = names.slice(currentIndex, currentIndex + prize);
-            currentIndex += prize;
+        prizes.forEach((prize) => {
+            const winners = names.slice(currentIndex, currentIndex + prize.count);
+            currentIndex += prize.count;
 
-            winnersList += `${prizeLevel}: ${winners.join(', ')}\n`;
+            winnersList += `${prize.title}: ${winners.join(', ')}\n`;
 
             // Display winners with animation
             const prizeDiv = document.createElement('div');
             prizeDiv.className = 'prize';
-            prizeDiv.innerHTML = `<h5>${prizeLevel}</h5><p>${winners.join(', ')}</p>`;
+            prizeDiv.innerHTML = `<h5>${prize.title}</h5><p>${winners.join(', ')}</p>`;
             resultDiv.appendChild(prizeDiv);
         });
 
@@ -136,6 +148,17 @@
         const doc = new jsPDF();
         doc.text(winnersList, 10, 10);
         doc.save("Lucky_Draw_Winners.pdf");
+    }
+
+    function exportToExcel() {
+        if (!winnersList) {
+            alert("Please run the Lucky Draw first!");
+            return;
+        }
+        const workbook = XLSX.utils.book_new();
+        const sheet = XLSX.utils.aoa_to_sheet(winnersList.split('\n').map(row => [row]));
+        XLSX.utils.book_append_sheet(workbook, sheet, "Winners");
+        XLSX.writeFile(workbook, "Lucky_Draw_Winners.xlsx");
     }
 
     function launchConfetti() {
