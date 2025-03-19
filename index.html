@@ -63,11 +63,18 @@
         renderTable();
     }
 
-    // Add/Update Participant
+    // Add/Update Participant with duplicate check
     function addParticipant() {
         const name = document.getElementById('participantName').value.trim();
         const traderAddress = document.getElementById('traderAddress').value.trim();
+        
         if (name && traderAddress) {
+            // Check for duplicate names (case-insensitive)
+            if (participants.some((p, i) => p.name.toLowerCase() === name.toLowerCase() && i !== editIndex)) {
+                alert("Participant with this name already exists.");
+                return;
+            }
+            
             if (editIndex === -1) {
                 participants.push({ name, traderAddress });
             } else {
@@ -98,7 +105,7 @@
         });
     }
 
-    // Start Draw
+    // Start Draw and auto-show winners
     function startDraw() {
         if (winners.length > 0) {
             alert("Lucky Draw already completed!");
@@ -141,13 +148,15 @@
         pdfMake.createPdf(docDefinition).download('Winners_List.pdf');
     }
 
-    // Reset Winners
+    // Reset Winners with confirmation
     function resetWinners() {
-        winners = [];
-        localStorage.removeItem('winners');
-        document.getElementById('startDrawBtn').disabled = false;
-        document.getElementById('winnerList').innerHTML = '';
-        alert("Winners reset successfully!");
+        if (confirm("Are you sure you want to reset the winners?")) {
+            winners = [];
+            localStorage.removeItem('winners');
+            document.getElementById('startDrawBtn').disabled = false;
+            document.getElementById('winnerList').innerHTML = '';
+            alert("Winners reset successfully!");
+        }
     }
 
     renderTable();
