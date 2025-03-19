@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Lucky Draw App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: #f0f8ff;
+        }
+        .lucky-draw-container {
+            background: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        h1 {
+            color: #007bff;
+            margin-bottom: 20px;
+            animation: glow 1.5s infinite alternate;
+        }
+        @keyframes glow {
+            from { text-shadow: 0 0 10px #007bff; }
+            to { text-shadow: 0 0 20px #0056b3; }
+        }
+        .form-control {
+            margin-bottom: 15px;
+            border: 2px solid #007bff;
+            transition: box-shadow 0.2s;
+        }
+        .form-control:focus {
+            box-shadow: 0 0 12px #007bff;
+            border-color: #007bff;
+        }
+        .progress {
+            height: 15px;
+            margin-bottom: 15px;
+            animation: fadeIn 0.8s ease;
+        }
+        .btn-primary {
+            background: #007bff;
+            border: none;
+            transition: background 0.2s;
+        }
+        .btn-primary:hover {
+            background: #0056b3;
+        }
+        #result {
+            font-size: 20px;
+            color: #28a745;
+            margin-top: 20px;
+            animation: fadeIn 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="lucky-draw-container">
+        <h1>Lucky Draw</h1>
+        <input type="text" id="namesInput" class="form-control" placeholder="Enter names separated by commas">
+        <button class="btn btn-primary w-100" onclick="startLuckyDraw()">Start Draw</button>
+        <div class="progress">
+            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%;"></div>
+        </div>
+        <div id="result"></div>
+        <button class="btn btn-secondary w-100 mt-3" onclick="restartApp()">Restart Test</button>
+    </div>
+
+    <script>
+        function startLuckyDraw() {
+            const names = document.getElementById('namesInput').value.split(',').map(name => name.trim()).filter(name => name !== "");
+            if (names.length === 0) {
+                alert("Please enter at least one name!");
+                return;
+            }
+
+            let progress = 0;
+            const progressBar = document.getElementById('progressBar');
+            const result = document.getElementById('result');
+            result.innerHTML = '';
+            progressBar.style.width = '0%';
+
+            const interval = setInterval(() => {
+                progress += 5;
+                progressBar.style.width = `${progress}%`;
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+                    const winner = names[Math.floor(Math.random() * names.length)];
+                    result.innerHTML = `Winner: <strong>${winner}</strong> 🎉`;
+                }
+            }, 100);
+        }
+
+        function restartApp() {
+            document.getElementById('namesInput').value = '';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('result').innerHTML = '';
+        }
+    </script>
+</body>
+</html>
