@@ -9,177 +9,121 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
     <style>
-        body {
-            background: #000;
-            color: #fff;
-            text-align: center;
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            color: #FFD700;
-            margin: 20px 0;
-        }
-        #container {
-            margin: 20px;
-        }
-        .winner {
-            font-size: 2rem;
-            font-weight: bold;
-            color: #FFD700;
-            animation: glow 1.5s infinite alternate;
-        }
-        @keyframes glow {
-            from { text-shadow: 0 0 10px #FFD700; }
-            to { text-shadow: 0 0 20px #FFD700; }
-        }
-        #countdown {
-            font-size: 3rem;
-            color: #FF6347;
-        }
+        body { background: #000; color: #fff; text-align: center; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+        h1 { color: #FFD700; margin: 20px 0; font-size: 2.5rem; }
         .hidden { display: none; }
-        .btn-custom {
-            margin: 10px;
-            background: #FFD700;
-            color: #000;
-            border: none;
-            padding: 10px 20px;
-            cursor: pointer;
-            border-radius: 5px;
-        }
-        .confetti {
-            position: fixed;
-            width: 10px;
-            height: 10px;
-            background: #FFD700;
-            animation: fall 2s linear infinite;
-        }
-        @keyframes fall {
-            from { transform: translateY(-100vh); }
-            to { transform: translateY(100vh); }
-        }
+        .btn-custom { margin: 10px; background: #FFD700; color: #000; border: none; padding: 10px 20px; cursor: pointer; border-radius: 5px; }
+        #winnerTable { max-width: 600px; margin: 20px auto; }
     </style>
 </head>
 <body>
 
-<div id="container">
+<div class="container">
     <h1>Sri Hanumaan Trader's Lucky Draw</h1>
 
-    <input type="file" id="fileInput" accept=".csv, .xlsx, .xls, .pdf" class="btn-custom">
-    <button class="btn-custom" onclick="addParticipant()">Add Participant</button>
-    <button class="btn-custom" onclick="startDraw()">Start Draw</button>
-    <button class="btn-custom" onclick="exportWinnersPDF()">Export Winners (PDF)</button>
-    <button class="btn-custom" onclick="exportWinnersExcel()">Export Winners (Excel)</button>
+    <!-- Admin Panel -->
+    <div id="adminPanel">
+        <h3>Add Participant</h3>
+        <input type="text" id="name" placeholder="Name" class="form-control mb-2">
+        <input type="text" id="address" placeholder="Trader Address" class="form-control mb-2">
+        <button class="btn-custom" onclick="addParticipant()">Add</button>
+        <button class="btn-custom" onclick="exportParticipantsPDF()">Export PDF</button>
+        <button class="btn-custom" onclick="exportParticipantsExcel()">Export Excel</button>
+    </div>
 
-    <div id="countdown" class="hidden"></div>
-    <h2 id="prizeTitle" class="hidden"></h2>
-    <div id="winnerName" class="winner hidden"></div>
+    <hr>
 
-    <table class="table table-dark mt-4">
+    <!-- Participants List -->
+    <h3>Participants List</h3>
+    <table id="participantTable" class="table table-dark table-bordered">
         <thead>
-            <tr>
-                <th>S. No</th>
-                <th>Name</th>
-                <th>Trader Address</th>
-            </tr>
+            <tr><th>S. No</th><th>Name</th><th>Address</th><th>Action</th></tr>
         </thead>
         <tbody id="participantList"></tbody>
     </table>
+
+    <button class="btn-custom" onclick="startDraw()">Start Lucky Draw</button>
+
+    <!-- Winner Section -->
+    <div id="winnerSection" class="hidden">
+        <h2>Winner:</h2>
+        <h3 id="winnerName" style="color: #FFD700;"></h3>
+        <button class="btn-custom" onclick="startDraw()">Next Winner</button>
+    </div>
 </div>
 
-<audio id="bgMusic" loop>
-    <source src="background-music.mp3" type="audio/mpeg">
-</audio>
-
 <script>
-    const participants = [];
-    const winners = [];
+    // Load saved participants from local storage
+    let participants = JSON.parse(localStorage.getItem('participants')) || [];
 
-    function addParticipant() {
-        const name = prompt("Enter Participant's Name:");
-        const address = prompt("Enter Trader's Address:");
-        if (name && address) {
-            participants.push({ sno: participants.length + 1, name, address });
-            updateParticipantList();
-        }
-    }
-
-    function updateParticipantList() {
+    function renderParticipants() {
         const list = document.getElementById('participantList');
-        list.innerHTML = "";
-        participants.forEach(p => {
-            list.innerHTML += `<tr><td>${p.sno}</td><td>${p.name}</td><td>${p.address}</td></tr>`;
+        list.innerHTML = '';
+        participants.forEach((p, index) => {
+            list.innerHTML += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${p.name}</td>
+                    <td>${p.address}</td>
+                    <td><button onclick="deleteParticipant(${index})" class="btn btn-danger btn-sm">Delete</button></td>
+                </tr>`;
         });
     }
 
+    function addParticipant() {
+        const name = document.getElementById('name').value;
+        const address = document.getElementById('address').value;
+        if (name && address) {
+            participants.push({ name, address });
+            localStorage.setItem('participants', JSON.stringify(participants));
+            renderParticipants();
+            document.getElementById('name').value = '';
+            document.getElementById('address').value = '';
+        } else {
+            alert("Please enter name and address.");
+        }
+    }
+
+    function deleteParticipant(index) {
+        participants.splice(index, 1);
+        localStorage.setItem('participants', JSON.stringify(participants));
+        renderParticipants();
+    }
+
+    function exportParticipantsPDF() {
+        const docDefinition = { content: ['Sri Hanumaan Trader\'s Lucky Draw Participants\n\n'] };
+        participants.forEach((p, i) => {
+            docDefinition.content.push(`${i + 1}. ${p.name} - ${p.address}\n`);
+        });
+        pdfMake.createPdf(docDefinition).download('participants.pdf');
+    }
+
+    function exportParticipantsExcel() {
+        let csvContent = "data:text/csv;charset=utf-8,S. No,Name,Address\n";
+        participants.forEach((p, i) => {
+            csvContent += `${i + 1},${p.name},${p.address}\n`;
+        });
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "participants.csv");
+        document.body.appendChild(link);
+        link.click();
+    }
+
+    // Lucky Draw Logic
     function startDraw() {
         if (participants.length === 0) {
             alert("No participants added!");
             return;
         }
-        playMusic();
-        showCountdown(() => drawWinner());
-    }
-
-    function showCountdown(callback) {
-        let countdown = 5;
-        const countdownEl = document.getElementById('countdown');
-        countdownEl.classList.remove('hidden');
-        const interval = setInterval(() => {
-            countdownEl.innerText = countdown;
-            countdown--;
-            if (countdown < 0) {
-                clearInterval(interval);
-                countdownEl.classList.add('hidden');
-                callback();
-            }
-        }, 1000);
-    }
-
-    function drawWinner() {
         const winnerIndex = Math.floor(Math.random() * participants.length);
         const winner = participants[winnerIndex];
-        winners.push(winner);
-
-        document.getElementById('prizeTitle').innerText = `Winner: ${winner.name}`;
-        document.getElementById('prizeTitle').classList.remove('hidden');
-        launchConfetti();
+        document.getElementById('winnerName').innerText = `${winner.name} (${winner.address})`;
+        document.getElementById('winnerSection').classList.remove('hidden');
     }
 
-    function launchConfetti() {
-        for (let i = 0; i < 100; i++) {
-            const confetti = document.createElement('div');
-            confetti.className = 'confetti';
-            confetti.style.left = `${Math.random() * 100}vw`;
-            confetti.style.animationDuration = `${Math.random() * 3 + 2}s`;
-            document.body.appendChild(confetti);
-            setTimeout(() => confetti.remove(), 3000);
-        }
-    }
-
-    function exportWinnersPDF() {
-        const docDefinition = { content: ['Sri Hanumaan Trader\'s Lucky Draw Winners\n\n'] };
-        winners.forEach(winner => {
-            docDefinition.content.push(`${winner.sno}. ${winner.name} - ${winner.address}\n`);
-        });
-        pdfMake.createPdf(docDefinition).download('winners.pdf');
-    }
-
-    function exportWinnersExcel() {
-        let csvContent = "data:text/csv;charset=utf-8,S. No,Name,Trader Address\n";
-        winners.forEach(winner => {
-            csvContent += `${winner.sno},${winner.name},${winner.address}\n`;
-        });
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", "winners.csv");
-        document.body.appendChild(link);
-        link.click();
-    }
-
-    function playMusic() {
-        document.getElementById('bgMusic').play();
-    }
+    renderParticipants();
 </script>
 
 </body>
