@@ -9,40 +9,37 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0"></script>
+    
     <style>
         body { background: #000; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
         h1 { color: #FFD700; margin-bottom: 20px; }
-        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; margin-top: 10px; }
+        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
         table { width: 100%; background: #fff; color: #000; margin-top: 20px; border-radius: 5px; }
         th, td { padding: 10px; border: 1px solid #ddd; }
-        #winnerDisplay { font-size: 32px; margin-top: 20px; color: #FFD700; }
+        #winnerList { margin-top: 20px; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
     <h1>Sri Hanumaan Trader's Lucky Draw</h1>
-
-    <button class="btn-custom" onclick="addParticipants()">Add Participants</button>
     <button class="btn-custom" onclick="startLuckyDraw()">Start Lucky Draw</button>
-    <button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
-
-    <div id="winnerDisplay" class="hidden"></div>
 
     <div id="winnerList" class="hidden">
         <h2>Winners</h2>
         <table id="winnersTable" class="table table-bordered">
             <thead>
-                <tr><th>Coupon No</th><th>Name</th><th>Trader Address</th><th>Prize</th></tr>
+                <tr><th>Coupon No</th><th>Prize</th></tr>
             </thead>
             <tbody></tbody>
         </table>
     </div>
 
-    <script>
-        let participants = JSON.parse(localStorage.getItem('participants')) || [];
-        let winners = JSON.parse(localStorage.getItem('winners')) || [];
+    <audio id="winSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
 
+    <script>
+        let participants = Array.from({ length: 100 }, (_, i) => i + 1); // 100 coupons
+        let winners = [];
         const prizeStructure = [
             { prize: '6 grams Gold', count: 1 },
             { prize: '4 grams Gold', count: 2 },
@@ -52,92 +49,61 @@
             { prize: '0.5 grams Silver', count: 6 }
         ];
 
-        function addParticipants() {
-            const totalParticipants = parseInt(prompt("Enter total number of participants:"));
-            if (isNaN(totalParticipants) || totalParticipants <= 0) {
-                alert("Please enter a valid number of participants.");
-                return;
-            }
-
-            participants = [];
-            for (let i = 1; i <= totalParticipants; i++) {
-                const name = prompt(`Enter name for Participant ${i}:`);
-                const traderAddress = prompt(`Enter trader address for Participant ${i}:`);
-                participants.push({ couponNumber: i, name, traderAddress });
-            }
-
-            localStorage.setItem('participants', JSON.stringify(participants));
-            alert("Participants added successfully!");
-        }
-
-        function startLuckyDraw() {
-            if (participants.length === 0) {
-                alert("No participants available for the draw.");
-                return;
-            }
+        async function startLuckyDraw() {
+            if (participants.length === 0) return alert("No participants left.");
 
             let shuffled = [...participants].sort(() => 0.5 - Math.random());
             winners = [];
 
-            prizeStructure.forEach(prize => {
+            for (const prize of prizeStructure) {
                 for (let i = 0; i < prize.count && shuffled.length > 0; i++) {
-                    const winner = shuffled.pop();
-                    winners.push({ ...winner, prize: prize.prize });
-                }
-            });
+                    const winnerCoupon = shuffled.pop();
+                    winners.push({ couponNumber: winnerCoupon, prize: prize.prize });
 
-            shuffled.forEach(p => winners.push({ ...p, prize: 'Common Gift' }));
-
-            localStorage.setItem('winners', JSON.stringify(winners));
-            announceWinners();
-        }
-
-        function announceWinners() {
-            const winnerDisplay = document.getElementById('winnerDisplay');
-            const winnerList = document.getElementById('winnerList');
-            winnerDisplay.classList.remove('hidden');
-            winnerList.classList.remove('hidden');
-            
-            const tbody = document.querySelector('#winnersTable tbody');
-            tbody.innerHTML = '';
-
-            let i = 0;
-            function showNextWinner() {
-                if (i < winners.length) {
-                    const w = winners[i];
-                    winnerDisplay.innerHTML = `Coupon No: ${w.couponNumber}`;
-                    setTimeout(() => {
-                        winnerDisplay.innerHTML = `
-                            Coupon No: ${w.couponNumber}<br>
-                            Name: ${w.name}<br>
-                            Trader Address: ${w.traderAddress}<br>
-                            Prize: ${w.prize}
-                        `;
-                        tbody.innerHTML += `
-                            <tr>
-                                <td>${w.couponNumber}</td>
-                                <td>${w.name}</td>
-                                <td>${w.traderAddress}</td>
-                                <td>${w.prize}</td>
-                            </tr>`;
-                        i++;
-                        setTimeout(showNextWinner, 3000);
-                    }, 2000);
-                } else {
-                    winnerDisplay.innerHTML = "All winners have been announced!";
+                    if (['6 grams Gold', '4 grams Gold', '3 grams Gold'].includes(prize.prize)) {
+                        triggerConfetti();
+                    }
+                    playWinSound();
+                    await sleep(1500);
+                    renderWinners();
                 }
             }
-            showNextWinner();
+
+            shuffled.forEach(coupon => winners.push({ couponNumber: coupon, prize: 'Common Gift' }));
+            renderWinners();
         }
 
-        function resetWinners() {
-            localStorage.removeItem('winners');
-            localStorage.removeItem('participants');
-            winners = [];
-            participants = [];
-            alert("Winners and participants have been reset.");
-            document.querySelector('#winnersTable tbody').innerHTML = '';
-            document.getElementById('winnerDisplay').classList.add('hidden');
+        function triggerConfetti() {
+            const colors = ['#ff0', '#f00', '#0f0', '#00f', '#ff4500', '#9400d3', '#00ffff', '#ff1493'];
+
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 },
+                colors: Array.from({ length: 5 }, () => colors[Math.floor(Math.random() * colors.length)])
+            });
+        }
+
+        function playWinSound() {
+            document.getElementById('winSound').play();
+        }
+
+        function renderWinners() {
+            const winnerList = document.getElementById('winnerList');
+            winnerList.classList.remove('hidden');
+            const tbody = document.querySelector('#winnersTable tbody');
+            tbody.innerHTML = '';
+            winners.forEach(w => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${w.couponNumber}</td>
+                        <td>${w.prize}</td>
+                    </tr>`;
+            });
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
     </script>
 </body>
