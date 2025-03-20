@@ -11,8 +11,7 @@
     <style>
         body { background: #000; color: #fff; text-align: center; font-family: Arial, sans-serif; padding: 20px; }
         h1 { color: #FFD700; margin-bottom: 20px; }
-        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 10px; margin: 5px; border-radius: 5px; cursor: pointer; }
-        #participants { width: 100%; margin: 20px 0; text-align: left; color: #000; }
+        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
         #countdown { font-size: 48px; color: #FFD700; margin: 20px 0; }
         #winnerList { margin-top: 20px; }
         #winnersTable { width: 100%; color: #000; background: #fff; margin-top: 20px; border: 1px solid #ddd; }
@@ -25,16 +24,17 @@
 <body>
     <h1>Lucky Draw</h1>
 
-    <button class="btn-custom" onclick="addParticipant()">Add Participant</button>
+    <div class="mb-3">
+        <label for="totalCoupons" class="form-label">Total Coupons:</label>
+        <input type="number" id="totalCoupons" class="form-control w-25 mx-auto" min="1" max="10000" value="100">
+    </div>
+
     <button class="btn-custom" onclick="startLuckyDraw()">Start Draw</button>
     <button class="btn-custom" onclick="exportPDF()">Export PDF</button>
     <button class="btn-custom" onclick="exportCSV()">Export CSV</button>
     <button class="btn-custom" onclick="resetDraw()">Reset</button>
 
-    <div>
-        <h3>Total Participants: <span id="totalParticipants">0</span></h3>
-        <textarea id="participants" rows="10" class="form-control"></textarea>
-    </div>
+    <h3>Total Coupons: <span id="totalParticipants">100</span></h3>
 
     <h2 id="countdown" class="hidden"></h2>
 
@@ -59,45 +59,37 @@
             { prize: 'Consolation Prize', count: 10 }
         ];
 
-        function addParticipant() {
-            const input = prompt("Enter participant name:");
-            if (input) {
-                participants.push(input);
-                updateParticipants();
-            }
-        }
-
-        function updateParticipants() {
-            document.getElementById('participants').value = participants.join('\n');
-            document.getElementById('totalParticipants').textContent = participants.length;
-        }
+        // Update the total participants when the total coupons are edited
+        document.getElementById('totalCoupons').addEventListener('input', (e) => {
+            const total = parseInt(e.target.value) || 0;
+            document.getElementById('totalParticipants').textContent = total;
+        });
 
         function resetDraw() {
-            participants = [];
             winners = [];
-            document.getElementById('participants').value = '';
             document.getElementById('winnersTable').querySelector('tbody').innerHTML = '';
-            updateParticipants();
             alert("Draw Reset!");
         }
 
         async function startLuckyDraw() {
-            if (participants.length === 0) {
-                alert("No participants available!");
+            const totalCoupons = parseInt(document.getElementById('totalCoupons').value);
+            if (totalCoupons <= 0) {
+                alert("Please enter a valid number of coupons.");
                 return;
             }
 
+            participants = Array.from({ length: totalCoupons }, (_, i) => i + 1);
             let shuffled = [...participants].sort(() => 0.5 - Math.random());
             winners = [];
 
             for (const prize of prizeStructure) {
                 for (let i = 0; i < prize.count && shuffled.length > 0; i++) {
                     await countdown(3);
-                    const winner = shuffled.pop();
-                    winners.push({ name: winner, prize: prize.prize });
+                    const winnerCoupon = shuffled.pop();
+                    winners.push({ couponNumber: winnerCoupon, prize: prize.prize });
 
                     // Announce the winner
-                    announceWinner(winner, prize.prize);
+                    announceWinner(winnerCoupon, prize.prize);
                     triggerConfetti();
                     renderWinners();
                     await sleep(2000);
@@ -107,8 +99,8 @@
             renderWinners();
         }
 
-        function announceWinner(name, prize) {
-            const message = `${name} wins ${prize}`;
+        function announceWinner(couponNumber, prize) {
+            const message = `Coupon Number ${couponNumber} wins ${prize}`;
             const utterance = new SpeechSynthesisUtterance(message);
             utterance.lang = 'en-US';
             speechSynthesis.speak(utterance);
@@ -126,7 +118,7 @@
             winners.forEach(w => {
                 tbody.innerHTML += `
                     <tr class="winner-announcement">
-                        <td>${w.name}</td>
+                        <td>${w.couponNumber}</td>
                         <td>${w.prize}</td>
                     </tr>`;
             });
@@ -136,14 +128,14 @@
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
             doc.text("Lucky Draw Winners", 20, 10);
-            winners.forEach((w, i) => doc.text(`${i + 1}. ${w.name} - ${w.prize}`, 20, 20 + i * 10));
+            winners.forEach((w, i) => doc.text(`${i + 1}. Coupon ${w.couponNumber} - ${w.prize}`, 20, 20 + i * 10));
             doc.save('winners.pdf');
         }
 
         function exportCSV() {
             let csvContent = "data:text/csv;charset=utf-8,Coupon No,Prize\n";
             winners.forEach(w => {
-                csvContent += `${w.name},${w.prize}\n`;
+                csvContent += `${w.couponNumber},${w.prize}\n`;
             });
 
             const encodedUri = encodeURI(csvContent);
@@ -167,8 +159,6 @@
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
-
-        updateParticipants();
     </script>
 </body>
 </html>
