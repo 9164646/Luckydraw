@@ -16,36 +16,16 @@
         .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
         table { width: 100%; background: #fff; color: #000; margin-top: 20px; border-radius: 5px; }
         th, td { padding: 10px; border: 1px solid #ddd; }
-        #winnerList { margin-top: 20px; }
+        #winnerDisplay { font-size: 24px; margin-top: 20px; color: #FFD700; }
         .hidden { display: none; }
     </style>
 </head>
 <body>
     <h1>Sri Hanumaan Trader's Lucky Draw</h1>
-    <button class="btn-custom" onclick="toggleAdminPanel()">Admin Panel</button>
     <button class="btn-custom" onclick="startLuckyDraw()">Start Lucky Draw</button>
-    <button class="btn-custom" onclick="exportWinnersPDF()">Download PDF</button>
     <button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
-    <button class="btn-custom" onclick="exportWinnersExcel()">Export to Excel</button>
 
-    <div id="adminPanel" class="hidden">
-        <h2>Manage Participants</h2>
-        <input type="number" id="totalCoupons" placeholder="Total Coupons" class="form-control mb-2">
-        <input type="text" id="participantName" placeholder="Enter Name" class="form-control mb-2">
-        <input type="text" id="traderAddress" placeholder="Enter Trader Address" class="form-control mb-2">
-        <button class="btn-custom" onclick="addParticipant()">Add Participant</button>
-
-        <h3>Upload Excel File</h3>
-        <input type="file" id="excelFile" accept=".xlsx, .xls" class="form-control mb-2">
-        <button class="btn-custom" onclick="uploadExcel()">Upload Participants</button>
-
-        <table id="participantTable" class="table table-bordered mt-3">
-            <thead>
-                <tr><th>Coupon No</th><th>Name</th><th>Trader Address</th></tr>
-            </thead>
-            <tbody></tbody>
-        </table>
-    </div>
+    <div id="winnerDisplay" class="hidden"></div>
 
     <div id="winnerList" class="hidden">
         <h2>Winners</h2>
@@ -60,7 +40,6 @@
     <script>
         let participants = JSON.parse(localStorage.getItem('participants')) || [];
         let winners = JSON.parse(localStorage.getItem('winners')) || [];
-        let totalCoupons = localStorage.getItem('totalCoupons') || 0;
 
         const prizeStructure = [
             { prize: '6 grams Gold', count: 1 },
@@ -70,39 +49,6 @@
             { prize: '1 gram Gold', count: 5 },
             { prize: '0.5 grams Silver', count: 6 }
         ];
-
-        function toggleAdminPanel() {
-            document.getElementById('adminPanel').classList.toggle('hidden');
-            renderTable();
-        }
-
-        function addParticipant() {
-            const name = document.getElementById('participantName').value.trim();
-            const traderAddress = document.getElementById('traderAddress').value.trim();
-            totalCoupons = parseInt(document.getElementById('totalCoupons').value);
-
-            if (!totalCoupons) return alert("Please enter the total number of coupons.");
-            if (!name || !traderAddress) return alert("Please enter both Name and Trader Address.");
-
-            const couponNumber = participants.length + 1;
-            participants.push({ couponNumber, name, traderAddress });
-            localStorage.setItem('participants', JSON.stringify(participants));
-            localStorage.setItem('totalCoupons', totalCoupons);
-            renderTable();
-        }
-
-        function renderTable() {
-            const tbody = document.querySelector('#participantTable tbody');
-            tbody.innerHTML = '';
-            participants.forEach(p => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${p.couponNumber}</td>
-                        <td>${p.name}</td>
-                        <td>${p.traderAddress}</td>
-                    </tr>`;
-            });
-        }
 
         function startLuckyDraw() {
             if (participants.length === 0) return alert("No participants available for the draw.");
@@ -119,52 +65,47 @@
             shuffled.forEach(p => winners.push({ ...p, prize: 'Common Gift' }));
 
             localStorage.setItem('winners', JSON.stringify(winners));
-            renderWinners();
+            announceWinners();
         }
 
-        function renderWinners() {
+        function announceWinners() {
+            const winnerDisplay = document.getElementById('winnerDisplay');
             const winnerList = document.getElementById('winnerList');
+            winnerDisplay.classList.remove('hidden');
             winnerList.classList.remove('hidden');
-            const tbody = document.querySelector('#winnersTable tbody');
-            tbody.innerHTML = '';
-            winners.forEach(w => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${w.couponNumber}</td>
-                        <td>${w.name}</td>
-                        <td>${w.traderAddress}</td>
-                        <td>${w.prize}</td>
-                    </tr>`;
-            });
+            
+            let i = 0;
+            function showNextWinner() {
+                if (i < winners.length) {
+                    const w = winners[i];
+                    winnerDisplay.innerHTML = `Coupon No: ${w.couponNumber}`;
+                    setTimeout(() => {
+                        winnerDisplay.innerHTML = `Coupon No: ${w.couponNumber}<br>Name: ${w.name}<br>Trader Address: ${w.traderAddress}<br>Prize: ${w.prize}`;
+                        const tbody = document.querySelector('#winnersTable tbody');
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${w.couponNumber}</td>
+                                <td>${w.name}</td>
+                                <td>${w.traderAddress}</td>
+                                <td>${w.prize}</td>
+                            </tr>`;
+                        i++;
+                        setTimeout(showNextWinner, 3000);
+                    }, 2000);
+                } else {
+                    winnerDisplay.innerHTML = "All winners have been announced!";
+                }
+            }
+            showNextWinner();
         }
 
         function resetWinners() {
             winners = [];
             localStorage.removeItem('winners');
             alert("Winners have been reset.");
-            renderWinners();
+            document.querySelector('#winnersTable tbody').innerHTML = '';
+            document.getElementById('winnerDisplay').classList.add('hidden');
         }
-
-        function exportWinnersPDF() {
-            const docDefinition = {
-                content: winners.map(w => `${w.couponNumber}: ${w.name} - ${w.traderAddress} (${w.prize})`)
-            };
-            pdfMake.createPdf(docDefinition).download('Winners_List.pdf');
-        }
-
-        function exportWinnersExcel() {
-            const ws = XLSX.utils.json_to_sheet(winners);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, "Winners");
-            XLSX.writeFile(wb, "Winners_List.xlsx");
-        }
-
-        function uploadExcel() {
-            alert("Excel Upload Coming Soon!");
-        }
-
-        renderTable();
-        renderWinners();
     </script>
 </body>
 </html>
