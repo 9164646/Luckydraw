@@ -21,6 +21,8 @@
 </head>
 <body>
     <h1>Lucky Draw</h1>
+    <h3>Total Participants: <span id="totalParticipants">0</span></h3>
+    
     <button class="btn-custom" onclick="startLuckyDraw()">Start Lucky Draw</button>
     <button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
 
@@ -59,6 +61,9 @@
             { prize: '1 gram Gold', count: 5 },
             { prize: '0.5 grams Silver', count: 6 }
         ];
+
+        // Show total participants on load
+        document.getElementById('totalParticipants').textContent = participants.length;
 
         async function startLuckyDraw() {
             if (participants.length === 0) return alert("No participants left.");
