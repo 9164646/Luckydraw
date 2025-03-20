@@ -7,51 +7,47 @@
     <title>Lucky Draw</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0"></script>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
     <style>
-        body { background: #000; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+        body { background: #000; color: #fff; text-align: center; font-family: Arial, sans-serif; padding: 20px; }
         h1 { color: #FFD700; margin-bottom: 20px; }
-        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; margin: 5px; }
-        table { width: 100%; background: #fff; color: #000; margin-top: 20px; border-radius: 5px; }
-        th, td { padding: 10px; border: 1px solid #ddd; }
-        #winnerList { margin-top: 20px; }
-        .hidden { display: none; }
+        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 10px; margin: 5px; border-radius: 5px; cursor: pointer; }
+        #participants { width: 100%; margin: 20px 0; text-align: left; color: #000; }
         #countdown { font-size: 48px; color: #FFD700; margin: 20px 0; }
+        #winnerList { margin-top: 20px; }
+        #winnersTable { width: 100%; color: #000; background: #fff; margin-top: 20px; border: 1px solid #ddd; }
+        th, td { padding: 10px; border: 1px solid #ddd; }
+        .hidden { display: none; }
+        .winner-announcement { animation: bounce 1s ease; color: #FFD700; font-size: 24px; margin-top: 10px; }
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-30px); } 60% { transform: translateY(-15px); } }
     </style>
 </head>
 <body>
     <h1>Lucky Draw</h1>
-    <h3>Total Participants: <span id="totalParticipants">0</span></h3>
-    
-    <button class="btn-custom" onclick="startLuckyDraw()">Start Lucky Draw</button>
-    <button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
 
-    <h2 id="countdown" class="hidden"></h2>
+    <button class="btn-custom" onclick="addParticipant()">Add Participant</button>
+    <button class="btn-custom" onclick="startLuckyDraw()">Start Draw</button>
+    <button class="btn-custom" onclick="exportPDF()">Export PDF</button>
+    <button class="btn-custom" onclick="exportCSV()">Export CSV</button>
+    <button class="btn-custom" onclick="resetDraw()">Reset</button>
 
     <div>
-        <label for="voiceSelect">Select Voice:</label>
-        <select id="voiceSelect" class="form-control w-25 mx-auto my-3">
-            <option value="male">Male</option>
-            <option value="female">Female</option>
-        </select>
+        <h3>Total Participants: <span id="totalParticipants">0</span></h3>
+        <textarea id="participants" rows="10" class="form-control"></textarea>
     </div>
+
+    <h2 id="countdown" class="hidden"></h2>
 
     <div id="winnerList" class="hidden">
         <h2>Winners</h2>
         <table id="winnersTable" class="table table-bordered">
-            <thead>
-                <tr><th>Coupon No</th><th>Prize</th></tr>
-            </thead>
+            <thead><tr><th>Coupon No</th><th>Prize</th></tr></thead>
             <tbody></tbody>
         </table>
     </div>
 
-    <audio id="bgMusic" loop>
-        <source src="https://www.soundjay.com/misc/sounds/bell-ringing-01.mp3" type="audio/mpeg">
-    </audio>
-
     <script>
-        let participants = Array.from({ length: 100 }, (_, i) => i + 1); // 100 coupons
+        let participants = [];
         let winners = [];
         const prizeStructure = [
             { prize: '6 grams Gold', count: 1 },
@@ -59,73 +55,67 @@
             { prize: '3 grams Gold', count: 3 },
             { prize: '2 grams Gold', count: 4 },
             { prize: '1 gram Gold', count: 5 },
-            { prize: '0.5 grams Silver', count: 6 }
+            { prize: '0.5 grams Silver', count: 6 },
+            { prize: 'Consolation Prize', count: 10 }
         ];
 
-        // Show total participants on load
-        document.getElementById('totalParticipants').textContent = participants.length;
+        function addParticipant() {
+            const input = prompt("Enter participant name:");
+            if (input) {
+                participants.push(input);
+                updateParticipants();
+            }
+        }
+
+        function updateParticipants() {
+            document.getElementById('participants').value = participants.join('\n');
+            document.getElementById('totalParticipants').textContent = participants.length;
+        }
+
+        function resetDraw() {
+            participants = [];
+            winners = [];
+            document.getElementById('participants').value = '';
+            document.getElementById('winnersTable').querySelector('tbody').innerHTML = '';
+            updateParticipants();
+            alert("Draw Reset!");
+        }
 
         async function startLuckyDraw() {
-            if (participants.length === 0) return alert("No participants left.");
-            
-            // Start background music
-            document.getElementById('bgMusic').play();
+            if (participants.length === 0) {
+                alert("No participants available!");
+                return;
+            }
 
             let shuffled = [...participants].sort(() => 0.5 - Math.random());
             winners = [];
 
             for (const prize of prizeStructure) {
                 for (let i = 0; i < prize.count && shuffled.length > 0; i++) {
-                    await countdown(3);  // 3-second countdown before announcement
-                    const winnerCoupon = shuffled.pop();
-                    winners.push({ couponNumber: winnerCoupon, prize: prize.prize });
+                    await countdown(3);
+                    const winner = shuffled.pop();
+                    winners.push({ name: winner, prize: prize.prize });
 
-                    // Voice announcement
-                    announceWinner(winnerCoupon, prize.prize);
-
-                    // Confetti for big prizes
-                    if (['6 grams Gold', '4 grams Gold', '3 grams Gold'].includes(prize.prize)) {
-                        triggerConfetti();
-                    }
-
-                    await sleep(2000);  // Delay for suspense
+                    // Announce the winner
+                    announceWinner(winner, prize.prize);
+                    triggerConfetti();
                     renderWinners();
+                    await sleep(2000);
                 }
             }
 
-            // Remaining participants get a common gift
-            shuffled.forEach(coupon => winners.push({ couponNumber: coupon, prize: 'Common Gift' }));
             renderWinners();
-
-            // Stop background music after the draw
-            document.getElementById('bgMusic').pause();
         }
 
-        function announceWinner(couponNumber, prize) {
-            const voiceSelect = document.getElementById('voiceSelect').value;
-            const message = `Coupon Number ${couponNumber} wins ${prize}`;
+        function announceWinner(name, prize) {
+            const message = `${name} wins ${prize}`;
             const utterance = new SpeechSynthesisUtterance(message);
             utterance.lang = 'en-US';
-            utterance.rate = 0.9;
-            
-            // Choose male or female voice
-            const voices = speechSynthesis.getVoices();
-            utterance.voice = voices.find(voice => 
-                (voiceSelect === 'male' && voice.name.includes('Male')) || 
-                (voiceSelect === 'female' && voice.name.includes('Female'))
-            ) || voices[0];
-            
             speechSynthesis.speak(utterance);
         }
 
         function triggerConfetti() {
-            const colors = ['#ff0', '#f00', '#0f0', '#00f', '#ff4500', '#9400d3', '#00ffff', '#ff1493'];
-            confetti({
-                particleCount: 150,
-                spread: 70,
-                origin: { y: 0.6 },
-                colors: Array.from({ length: 5 }, () => colors[Math.floor(Math.random() * colors.length)])
-            });
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         }
 
         function renderWinners() {
@@ -135,21 +125,33 @@
             tbody.innerHTML = '';
             winners.forEach(w => {
                 tbody.innerHTML += `
-                    <tr>
-                        <td>${w.couponNumber}</td>
+                    <tr class="winner-announcement">
+                        <td>${w.name}</td>
                         <td>${w.prize}</td>
                     </tr>`;
             });
         }
 
-        function resetWinners() {
-            winners = [];
-            alert("Winners have been reset.");
-            renderWinners();
+        function exportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.text("Lucky Draw Winners", 20, 10);
+            winners.forEach((w, i) => doc.text(`${i + 1}. ${w.name} - ${w.prize}`, 20, 20 + i * 10));
+            doc.save('winners.pdf');
         }
 
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
+        function exportCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,Coupon No,Prize\n";
+            winners.forEach(w => {
+                csvContent += `${w.name},${w.prize}\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "winners.csv");
+            document.body.appendChild(link);
+            link.click();
         }
 
         async function countdown(seconds) {
@@ -162,8 +164,11 @@
             countdownElement.classList.add('hidden');
         }
 
-        // Preload voices
-        window.speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        updateParticipants();
     </script>
 </body>
 </html>
