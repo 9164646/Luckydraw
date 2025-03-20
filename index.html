@@ -4,17 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Sri Hanumaan Trader's Lucky Draw</title>
+    <title>Lucky Draw</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/pdfmake.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.68/vfs_fonts.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0"></script>
-    
+
     <style>
         body { background: #000; color: #fff; font-family: Arial, sans-serif; text-align: center; padding: 20px; }
         h1 { color: #FFD700; margin-bottom: 20px; }
-        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; }
+        .btn-custom { background: #FFD700; color: #000; border: none; padding: 10px 15px; margin: 5px; border-radius: 5px; cursor: pointer; margin: 5px; }
         table { width: 100%; background: #fff; color: #000; margin-top: 20px; border-radius: 5px; }
         th, td { padding: 10px; border: 1px solid #ddd; }
         #winnerList { margin-top: 20px; }
@@ -22,8 +19,9 @@
     </style>
 </head>
 <body>
-    <h1>Sri Hanumaan Trader's Lucky Draw</h1>
+    <h1>Lucky Draw</h1>
     <button class="btn-custom" onclick="startLuckyDraw()">Start Lucky Draw</button>
+    <button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
 
     <div id="winnerList" class="hidden">
         <h2>Winners</h2>
@@ -34,8 +32,6 @@
             <tbody></tbody>
         </table>
     </div>
-
-    <audio id="winSound" src="https://www.soundjay.com/button/beep-07.wav"></audio>
 
     <script>
         let participants = Array.from({ length: 100 }, (_, i) => i + 1); // 100 coupons
@@ -60,32 +56,40 @@
                     const winnerCoupon = shuffled.pop();
                     winners.push({ couponNumber: winnerCoupon, prize: prize.prize });
 
+                    // Voice announcement
+                    announceWinner(winnerCoupon, prize.prize);
+
+                    // Confetti for big prizes
                     if (['6 grams Gold', '4 grams Gold', '3 grams Gold'].includes(prize.prize)) {
                         triggerConfetti();
                     }
-                    playWinSound();
-                    await sleep(1500);
+
+                    await sleep(2000);  // Delay for suspense
                     renderWinners();
                 }
             }
 
+            // Remaining participants get a common gift
             shuffled.forEach(coupon => winners.push({ couponNumber: coupon, prize: 'Common Gift' }));
             renderWinners();
         }
 
+        function announceWinner(couponNumber, prize) {
+            const message = `Coupon Number ${couponNumber} wins ${prize}`;
+            const utterance = new SpeechSynthesisUtterance(message);
+            utterance.lang = 'en-US';
+            utterance.rate = 0.9;  // Speed of the voice
+            speechSynthesis.speak(utterance);
+        }
+
         function triggerConfetti() {
             const colors = ['#ff0', '#f00', '#0f0', '#00f', '#ff4500', '#9400d3', '#00ffff', '#ff1493'];
-
             confetti({
-                particleCount: 100,
+                particleCount: 150,
                 spread: 70,
                 origin: { y: 0.6 },
                 colors: Array.from({ length: 5 }, () => colors[Math.floor(Math.random() * colors.length)])
             });
-        }
-
-        function playWinSound() {
-            document.getElementById('winSound').play();
         }
 
         function renderWinners() {
@@ -100,6 +104,12 @@
                         <td>${w.prize}</td>
                     </tr>`;
             });
+        }
+
+        function resetWinners() {
+            winners = [];
+            alert("Winners have been reset.");
+            renderWinners();
         }
 
         function sleep(ms) {
