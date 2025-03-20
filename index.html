@@ -16,12 +16,23 @@
         th, td { padding: 10px; border: 1px solid #ddd; }
         #winnerList { margin-top: 20px; }
         .hidden { display: none; }
+        #countdown { font-size: 48px; color: #FFD700; margin: 20px 0; }
     </style>
 </head>
 <body>
     <h1>Lucky Draw</h1>
     <button class="btn-custom" onclick="startLuckyDraw()">Start Lucky Draw</button>
     <button class="btn-custom" onclick="resetWinners()">Reset Winners</button>
+
+    <h2 id="countdown" class="hidden"></h2>
+
+    <div>
+        <label for="voiceSelect">Select Voice:</label>
+        <select id="voiceSelect" class="form-control w-25 mx-auto my-3">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+        </select>
+    </div>
 
     <div id="winnerList" class="hidden">
         <h2>Winners</h2>
@@ -32,6 +43,10 @@
             <tbody></tbody>
         </table>
     </div>
+
+    <audio id="bgMusic" loop>
+        <source src="https://www.soundjay.com/misc/sounds/bell-ringing-01.mp3" type="audio/mpeg">
+    </audio>
 
     <script>
         let participants = Array.from({ length: 100 }, (_, i) => i + 1); // 100 coupons
@@ -47,12 +62,16 @@
 
         async function startLuckyDraw() {
             if (participants.length === 0) return alert("No participants left.");
+            
+            // Start background music
+            document.getElementById('bgMusic').play();
 
             let shuffled = [...participants].sort(() => 0.5 - Math.random());
             winners = [];
 
             for (const prize of prizeStructure) {
                 for (let i = 0; i < prize.count && shuffled.length > 0; i++) {
+                    await countdown(3);  // 3-second countdown before announcement
                     const winnerCoupon = shuffled.pop();
                     winners.push({ couponNumber: winnerCoupon, prize: prize.prize });
 
@@ -72,13 +91,25 @@
             // Remaining participants get a common gift
             shuffled.forEach(coupon => winners.push({ couponNumber: coupon, prize: 'Common Gift' }));
             renderWinners();
+
+            // Stop background music after the draw
+            document.getElementById('bgMusic').pause();
         }
 
         function announceWinner(couponNumber, prize) {
+            const voiceSelect = document.getElementById('voiceSelect').value;
             const message = `Coupon Number ${couponNumber} wins ${prize}`;
             const utterance = new SpeechSynthesisUtterance(message);
             utterance.lang = 'en-US';
-            utterance.rate = 0.9;  // Speed of the voice
+            utterance.rate = 0.9;
+            
+            // Choose male or female voice
+            const voices = speechSynthesis.getVoices();
+            utterance.voice = voices.find(voice => 
+                (voiceSelect === 'male' && voice.name.includes('Male')) || 
+                (voiceSelect === 'female' && voice.name.includes('Female'))
+            ) || voices[0];
+            
             speechSynthesis.speak(utterance);
         }
 
@@ -115,6 +146,19 @@
         function sleep(ms) {
             return new Promise(resolve => setTimeout(resolve, ms));
         }
+
+        async function countdown(seconds) {
+            const countdownElement = document.getElementById('countdown');
+            countdownElement.classList.remove('hidden');
+            for (let i = seconds; i > 0; i--) {
+                countdownElement.textContent = i;
+                await sleep(1000);
+            }
+            countdownElement.classList.add('hidden');
+        }
+
+        // Preload voices
+        window.speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
     </script>
 </body>
 </html>
